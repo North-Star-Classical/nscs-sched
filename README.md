@@ -5,12 +5,12 @@ year. Ships as a **single standalone HTML file** (`dist/nscs-schedule-planner.ht
 that runs in any modern browser with no server — open the file and go. All data
 persists in the browser's localStorage.
 
-**Repository:** [github.com/Noth-Star-Classical/nscs-sched](https://github.com/Noth-Star-Classical/nscs-sched) (private)
+**Repository:** [github.com/North-Star-Classical/nscs-sched](https://github.com/North-Star-Classical/nscs-sched) (private)
 
 ## Quick start
 
 ```bash
-git clone https://github.com/Noth-Star-Classical/nscs-sched.git
+git clone https://github.com/North-Star-Classical/nscs-sched.git
 cd nscs-sched
 npm install
 npm run build      # src/App.jsx  ->  dist/nscs-schedule-planner.html

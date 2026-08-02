@@ -4,7 +4,7 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/Noth-Star-Classical/nscs-sched.git"
+    "url": "https://github.com/North-Star-Classical/nscs-sched.git"
   },
   "description": "North Star Classical Christian School — AYE 2027 schedule planning tool. Single-file standalone React app with localStorage persistence.",
   "type": "module",
