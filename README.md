@@ -2,7 +2,7 @@
 
 Schedule planning tool for North Star Classical Christian School's first full K–12 year.
 
-**Production:** [schedule.nsclassical.com](https://schedule.nsclassical.com) (Cloudflare Pages)  
+**Production:** Netlify (temporary) → [schedule.nsclassical.com](https://schedule.nsclassical.com) on Cloudflare later  
 **Repository:** [github.com/North-Star-Classical/nscs-sched](https://github.com/North-Star-Classical/nscs-sched) (private)
 
 Authenticated users share schedules via **Supabase** (Postgres + invite-only Auth). The app ships as a static build in `dist/index.html`.
@@ -40,7 +40,7 @@ docs/DEPLOY.md         Cloudflare Pages + custom domain setup
 - **UI:** React 18 (single component), Tailwind 2, html2pdf
 - **Auth:** Supabase Auth — email/password, invite-only (disable public sign-up)
 - **Data:** `plans` + `plan_autosaves` tables with RLS (authenticated read/write)
-- **Deploy:** Cloudflare Pages via GitHub Actions on push to `main` (Wrangler); see [docs/DEPLOY.md](docs/DEPLOY.md)
+- **Deploy:** Netlify from `main` now; Cloudflare Pages for custom domain later — see [docs/DEPLOY.md](docs/DEPLOY.md)
 - **Data:** `plans`, `plan_blocks`, `plan_teachers`, `plan_autosaves` (Supabase Postgres + RLS)
 - **Version:** `meta name="app-version"` in HTML + `package.json` (currently 1.2.1)
 

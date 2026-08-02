@@ -1,0 +1,17 @@
+# Netlify build — temporary hosting until schedule.nsclassical.com moves to Cloudflare Pages.
+# Set SUPABASE_URL and SUPABASE_ANON_KEY in Netlify → Site configuration → Environment variables.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Security headers (also in public/_headers, copied to dist at build time)
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

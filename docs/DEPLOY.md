@@ -1,112 +1,103 @@
-# Deploy to Cloudflare Pages
+# Deploy — Netlify (now) → Cloudflare (later)
 
-Target URL: **https://schedule.nsclassical.com**
+**Now:** Netlify (`*.netlify.app`)  
+**Later:** `https://schedule.nsclassical.com` on Cloudflare Pages (DNS stays in Cloudflare)
 
-## Recommended: GitHub Actions deploy
+---
 
-Every push to `main` runs tests, builds with Supabase credentials, and deploys `dist/` to Cloudflare Pages via Wrangler (see `.github/workflows/ci.yml`).
+## Netlify setup (temporary)
 
-### 1. Create a Cloudflare API token
+### 1. Connect GitHub
 
-1. [Cloudflare Dashboard](https://dash.cloudflare.com/) → profile → **My Profile** → **API Tokens**
-2. **Create Token** → **Edit Cloudflare Workers** template (includes Pages)
-3. Permissions needed:
-   - **Account** → **Cloudflare Pages** → **Edit**
-   - **Account** → **Account Settings** → **Read**
-4. Copy the token
+1. [Netlify](https://app.netlify.com/) → **Add new site** → **Import an existing project**
+2. **GitHub** → org **North-Star-Classical** → repo **nscs-sched**
+3. Branch: **`main`**
 
-Find your **Account ID** on any zone overview page (right sidebar) or Workers & Pages overview.
+Netlify reads `netlify.toml` automatically:
 
-### 2. Add GitHub repository secrets
+| Setting | Value |
+|---------|-------|
+| Build command | `npm run build` |
+| Publish directory | `dist` |
+| Node.js | 20 |
 
-Repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+### 2. Environment variables
 
-| Secret | Value |
-|--------|-------|
-| `CLOUDFLARE_API_TOKEN` | Token from step 1 |
-| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID |
+**Site configuration** → **Environment variables** → **Add a variable** (Production):
+
+| Variable | Value |
+|----------|-------|
 | `SUPABASE_URL` | `https://bnrlcpemxjkisnejqcbq.supabase.co` |
 | `SUPABASE_ANON_KEY` | Supabase anon public key |
 
-Set from CLI (run locally — do not commit values):
+Do **not** set `NSCS_TEST_MODE`.
+
+Trigger **Deploy site** after saving variables.
+
+### 3. Supabase Auth URLs
+
+**Authentication** → **URL configuration** → add your Netlify URL:
+
+- **Site URL:** `https://YOUR-SITE.netlify.app`
+- **Redirect URLs:** `https://YOUR-SITE.netlify.app/**`
+
+(Replace with your actual Netlify subdomain after first deploy.)
+
+### 4. Verify
+
+- [ ] Login screen on `https://YOUR-SITE.netlify.app`
+- [ ] Invited user can sign in
+- [ ] Save plan persists across browsers
+- [ ] PDF download works
+- [ ] `<meta name="app-version">` shows current version
+
+### 5. CLI deploy (optional)
 
 ```bash
-gh secret set CLOUDFLARE_API_TOKEN
-gh secret set CLOUDFLARE_ACCOUNT_ID
-gh secret set SUPABASE_URL --body "$(grep SUPABASE_URL .env | cut -d= -f2-)"
-gh secret set SUPABASE_ANON_KEY --body "$(grep SUPABASE_ANON_KEY .env | cut -d= -f2-)"
+netlify login
+netlify init          # link this repo to a Netlify site
+npm run build         # with .env or exported SUPABASE_* vars
+netlify deploy --prod --dir=dist
 ```
 
-### 3. First deploy
+---
 
-Merge to `main` (or push this branch). The **deploy** job creates the Pages project `nscs-sched` on first run if it does not exist.
+## Cloudflare Pages (later — custom domain)
 
-Check: **GitHub Actions** → latest workflow → **deploy** job → deployment URL (`nscs-sched.pages.dev`).
+When ready to move `schedule.nsclassical.com`:
 
-### 4. Custom domain
+1. Deploy to Cloudflare (see below)
+2. In **Cloudflare DNS** for `nsclassical.com`:
+   - Change `schedule` CNAME from Netlify target → `nscs-sched.pages.dev`
+3. Remove or pause the Netlify site (optional)
+4. Update Supabase **Site URL** / **Redirect URLs** to `https://schedule.nsclassical.com`
 
-Cloudflare Dashboard → **Workers & Pages** → **nscs-sched** → **Custom domains** → **Set up a custom domain** → `schedule.nsclassical.com`
+---
 
-If `nsclassical.com` DNS is in the same Cloudflare account, the CNAME is added automatically.
+## Cloudflare Pages (later)
 
-Manual DNS (if needed):
+GitHub Actions deploy is prepared but **disabled** in CI until Cloudflare secrets are added.
+
+### Enable when ready
+
+1. Add GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+2. Uncomment the `deploy` job in `.github/workflows/ci.yml`
+3. Merge / push to `main`
+
+### Cloudflare API token
+
+Dashboard → **My Profile** → **API Tokens** → **Edit Cloudflare Workers** template
+
+### Custom domain on Cloudflare
+
+**Workers & Pages** → **nscs-sched** → **Custom domains** → `schedule.nsclassical.com`
 
 | Type | Name | Target |
 |------|------|--------|
 | CNAME | `schedule` | `nscs-sched.pages.dev` |
 
-### 5. Verify production
-
-- [ ] Login screen at `https://schedule.nsclassical.com` (or `*.pages.dev` before DNS)
-- [ ] Invited Supabase user can sign in
-- [ ] Save plan persists across browsers
-- [ ] PDF download works
-- [ ] Page source shows `<meta name="app-version" content="1.2.x">`
-
 ---
 
-## Alternative: Cloudflare Git integration
+## Supabase
 
-Connect the repo in the dashboard instead of GitHub Actions:
-
-| Setting | Value |
-|---------|-------|
-| Production branch | `main` |
-| Build command | `npm install && npm run build` |
-| Build output directory | `dist` |
-| Node.js version | 20 |
-
-**Environment variables** (Production):
-
-| Variable | Value |
-|----------|-------|
-| `SUPABASE_URL` | Your Supabase project URL |
-| `SUPABASE_ANON_KEY` | Supabase anon public key |
-
-Do **not** set `NSCS_TEST_MODE` in production.
-
-If using Git integration, disable the `deploy` job in `.github/workflows/ci.yml` to avoid double deploys.
-
----
-
-## Manual deploy (local)
-
-Requires `wrangler login` once:
-
-```bash
-cp .env.example .env   # fill SUPABASE_URL + SUPABASE_ANON_KEY
-npm run deploy
-```
-
-Or:
-
-```bash
-SUPABASE_URL=... SUPABASE_ANON_KEY=... npm run build
-npx wrangler pages deploy dist --project-name=nscs-sched
-```
-
----
-
-## Supabase (already done)
-
-Migrations and seed should be applied before first production use. See [supabase/README.md](../supabase/README.md).
+Database migrations and seed are already applied. See [supabase/README.md](../supabase/README.md).
