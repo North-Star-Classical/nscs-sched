@@ -41,12 +41,15 @@ Trigger **Deploy site** after saving variables.
 - **Site URL:** `https://YOUR-SITE.netlify.app`
 - **Redirect URLs:** `https://YOUR-SITE.netlify.app/**`
 
+Required for magic-link sign-in and password reset emails to redirect back to the app.
+
 (Replace with your actual Netlify subdomain after first deploy.)
 
 ### 4. Verify
 
 - [ ] Login screen on `https://YOUR-SITE.netlify.app`
-- [ ] Invited user can sign in
+- [ ] Invited user can sign in (password or magic link)
+- [ ] Password reset email arrives and update flow works
 - [ ] Save plan persists across browsers
 - [ ] PDF download works
 - [ ] `<meta name="app-version">` shows current version

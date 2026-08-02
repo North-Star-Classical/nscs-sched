@@ -16,9 +16,23 @@ Open **SQL Editor** and run migrations in order:
 **Authentication → Providers → Email**
 
 - Enable Email
+- Enable **Confirm email** (recommended for magic links)
 - Disable **Allow new users to sign up**
 
+**Authentication → URL configuration**
+
+- **Site URL:** your deployed app URL (e.g. `https://nscschedule.netlify.app`)
+- **Redirect URLs:** same URL with wildcard, e.g. `https://nscschedule.netlify.app/**`
+
+Magic links and password reset emails redirect back to the app using this URL.
+
 Invite schedulers via **Authentication → Users → Invite user**.
+
+Sign-in options in the app:
+
+- Email + password
+- Magic link (one-time email link)
+- Forgot password → reset link → set new password
 
 ## 4. API keys
 
