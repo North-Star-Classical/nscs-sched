@@ -1,0 +1,2617 @@
+{
+  "id": "plan-aye-2027-default",
+  "name": "AYE 2027 Draft",
+  "blocks": [
+    {
+      "id": "b0",
+      "band": "K–6th",
+      "course": "LS Formation",
+      "subject": "Formation",
+      "days": [
+        "T"
+      ],
+      "start": 600,
+      "end": 630,
+      "teacher": "adjei",
+      "room": "COVE",
+      "anchor": true,
+      "grades": [
+        "K",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ]
+    },
+    {
+      "id": "b1",
+      "band": "K–6th",
+      "course": "Combined Opening",
+      "subject": "Formation",
+      "days": [
+        "T"
+      ],
+      "start": 630,
+      "end": 645,
+      "teacher": "adjei",
+      "room": "COVE",
+      "anchor": true,
+      "grades": [
+        "K",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ]
+    },
+    {
+      "id": "b2",
+      "band": "7th–12th",
+      "course": "US Opening & Formation",
+      "subject": "Formation",
+      "days": [
+        "T"
+      ],
+      "start": 630,
+      "end": 675,
+      "teacher": "andersen",
+      "room": "COVE",
+      "anchor": true,
+      "grades": [
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b3",
+      "band": "Faculty",
+      "course": "Faculty Cohorts (all PT)",
+      "subject": "Staff",
+      "days": [
+        "T"
+      ],
+      "start": 725,
+      "end": 770,
+      "teacher": null,
+      "room": "F.Hall",
+      "anchor": true,
+      "staff": true,
+      "grades": []
+    },
+    {
+      "id": "b4",
+      "band": "All School",
+      "course": "Opening",
+      "subject": "Formation",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 495,
+      "end": 505,
+      "teacher": "adjei",
+      "room": "F.Hall",
+      "anchor": true,
+      "grades": [
+        "K",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b5",
+      "band": "9th/10th",
+      "course": "Math (by level)",
+      "subject": "Math",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 510,
+      "end": 555,
+      "teacher": "various",
+      "room": "Various",
+      "mathBlock": true,
+      "grades": [
+        "9",
+        "10"
+      ]
+    },
+    {
+      "id": "b6",
+      "band": "9th/10th",
+      "course": "Latin 2nd Form (9th)",
+      "subject": "Latin",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 558,
+      "end": 603,
+      "teacher": "woodbridge",
+      "room": "212",
+      "splitGroup": "cross-a",
+      "note": "LS math window runs 9:18–10:03 in parallel (stagger — PRD 3.2 §8)",
+      "grades": [
+        "9"
+      ]
+    },
+    {
+      "id": "b7",
+      "band": "9th/10th",
+      "course": "Rhetoric 2 (10th)",
+      "subject": "Rhetoric",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 558,
+      "end": 603,
+      "teacher": "dodd",
+      "room": "212",
+      "splitGroup": "cross-a",
+      "concurrentWith": "cross-a",
+      "grades": [
+        "10"
+      ]
+    },
+    {
+      "id": "b8",
+      "band": "9th/10th",
+      "course": "Latin 3rd Form (10th)",
+      "subject": "Latin",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 606,
+      "end": 651,
+      "teacher": "woodbridge",
+      "room": "212",
+      "splitGroup": "cross-b",
+      "grades": [
+        "10"
+      ]
+    },
+    {
+      "id": "b9",
+      "band": "9th/10th",
+      "course": "Rhetoric 1 (9th)",
+      "subject": "Rhetoric",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 606,
+      "end": 651,
+      "teacher": "dodd",
+      "room": "204",
+      "splitGroup": "cross-b",
+      "grades": [
+        "9"
+      ]
+    },
+    {
+      "id": "b10",
+      "band": "9th/10th",
+      "course": "Biblical Theology",
+      "subject": "Theology",
+      "days": [
+        "M",
+        "W"
+      ],
+      "start": 660,
+      "end": 705,
+      "teacher": "woodbridge",
+      "room": "212",
+      "offsetNote": "Offsets Wellness (Th) — PRD 3.2 §12",
+      "grades": [
+        "9",
+        "10"
+      ]
+    },
+    {
+      "id": "b11",
+      "band": "9th/10th",
+      "course": "Biology",
+      "subject": "Science",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 708,
+      "end": 753,
+      "teacher": "gabrielson",
+      "room": "202/203",
+      "requiresCourse": "Bio Lab",
+      "grades": [
+        "9",
+        "10"
+      ]
+    },
+    {
+      "id": "b12",
+      "band": "9th/10th",
+      "course": "Lunch",
+      "subject": "Lunch",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 753,
+      "end": 780,
+      "teacher": null,
+      "room": "F.Hall",
+      "anchor": true,
+      "grades": [
+        "9",
+        "10"
+      ]
+    },
+    {
+      "id": "b13",
+      "band": "9th/10th",
+      "course": "Art",
+      "subject": "Art",
+      "days": [
+        "M",
+        "W"
+      ],
+      "start": 783,
+      "end": 828,
+      "teacher": "schwan",
+      "room": "209/210",
+      "grades": [
+        "9",
+        "10"
+      ]
+    },
+    {
+      "id": "b14",
+      "band": "9th/10th",
+      "course": "Music",
+      "subject": "Music",
+      "days": [
+        "Th"
+      ],
+      "start": 783,
+      "end": 828,
+      "teacher": "richards",
+      "room": "209/210",
+      "grades": [
+        "9",
+        "10"
+      ]
+    },
+    {
+      "id": "b15",
+      "band": "9th/10th",
+      "course": "Humanities 2",
+      "subject": "Humanities",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 832,
+      "end": 877,
+      "teacher": "itano",
+      "room": "212",
+      "grades": [
+        "9",
+        "10"
+      ]
+    },
+    {
+      "id": "b16",
+      "band": "9th/10th",
+      "course": "Humanities 2 (cont.)",
+      "subject": "Humanities",
+      "days": [
+        "M",
+        "Th"
+      ],
+      "start": 880,
+      "end": 925,
+      "teacher": "itano",
+      "room": "212",
+      "note": "90 min borrowed weekly — repay via Investment Time (PRD 3.4 §18)",
+      "grades": [
+        "9",
+        "10"
+      ]
+    },
+    {
+      "id": "b17",
+      "band": "9th/10th",
+      "course": "Math (by level)",
+      "subject": "Math",
+      "days": [
+        "T"
+      ],
+      "start": 495,
+      "end": 538,
+      "teacher": "various",
+      "room": "Various",
+      "mathBlock": true,
+      "grades": [
+        "9",
+        "10"
+      ]
+    },
+    {
+      "id": "b18",
+      "band": "9th/10th",
+      "course": "Bio Lab",
+      "subject": "Science",
+      "days": [
+        "T"
+      ],
+      "start": 678,
+      "end": 721,
+      "teacher": "gabrielson",
+      "room": "202/203",
+      "requiresCourse": "Biology",
+      "grades": [
+        "9",
+        "10"
+      ]
+    },
+    {
+      "id": "b19",
+      "band": "9th/10th",
+      "course": "Biology (Tue)",
+      "subject": "Science",
+      "days": [
+        "T"
+      ],
+      "start": 780,
+      "end": 828,
+      "teacher": "gabrielson",
+      "room": "202/203",
+      "grades": [
+        "9",
+        "10"
+      ]
+    },
+    {
+      "id": "b20",
+      "band": "9th/10th",
+      "course": "Music (Tue)",
+      "subject": "Music",
+      "days": [
+        "T"
+      ],
+      "start": 831,
+      "end": 877,
+      "teacher": "richards",
+      "room": "209/210",
+      "grades": [
+        "9",
+        "10"
+      ]
+    },
+    {
+      "id": "b21",
+      "band": "9th/10th",
+      "course": "Humanities 2 (Tue)",
+      "subject": "Humanities",
+      "days": [
+        "T"
+      ],
+      "start": 880,
+      "end": 925,
+      "teacher": "itano",
+      "room": "212",
+      "grades": [
+        "9",
+        "10"
+      ]
+    },
+    {
+      "id": "b22",
+      "band": "11th/12th",
+      "course": "Math (by level)",
+      "subject": "Math",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 510,
+      "end": 555,
+      "teacher": "various",
+      "room": "Various",
+      "mathBlock": true,
+      "grades": [
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b23",
+      "band": "11th/12th",
+      "course": "Art",
+      "subject": "Art",
+      "days": [
+        "M",
+        "W"
+      ],
+      "start": 558,
+      "end": 603,
+      "teacher": "schwan",
+      "room": "209/210",
+      "grades": [
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b24",
+      "band": "11th/12th",
+      "course": "Music",
+      "subject": "Music",
+      "days": [
+        "Th"
+      ],
+      "start": 558,
+      "end": 603,
+      "teacher": "richards",
+      "room": "209/210",
+      "grades": [
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b25",
+      "band": "11th/12th",
+      "course": "Chemistry (11th) / 12th Science",
+      "subject": "Science",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 606,
+      "end": 651,
+      "teacher": "gabrielson",
+      "room": "213",
+      "requiresCourse": "Chem Lab (Wed)",
+      "note": "Draft: Gabrielson/Weir? — confirm owner",
+      "grades": [
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b26",
+      "band": "11th/12th",
+      "course": "Chem Lab (Wed)",
+      "subject": "Science",
+      "days": [
+        "W"
+      ],
+      "start": 651,
+      "end": 695,
+      "teacher": "gabrielson",
+      "room": "213",
+      "requiresCourse": "Chemistry (11th) / 12th Science",
+      "grades": [
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b27",
+      "band": "11th/12th",
+      "course": "Applied Theology",
+      "subject": "Theology",
+      "days": [
+        "M"
+      ],
+      "start": 660,
+      "end": 705,
+      "teacher": "tbd-theo",
+      "room": "213",
+      "offsetNote": "Odd-AYE loop course (PRD 3.5 §23) · Draft: TBD-AppTheo — hire open (Q D20)",
+      "grades": [
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b28",
+      "band": "11th/12th",
+      "course": "Spanish I",
+      "subject": "Spanish",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 708,
+      "end": 753,
+      "teacher": "dodd",
+      "room": "213",
+      "splitGroup": "split-1112-a",
+      "grades": [
+        "11"
+      ]
+    },
+    {
+      "id": "b29",
+      "band": "11th/12th",
+      "course": "Senior Thesis",
+      "subject": "Rhetoric",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 708,
+      "end": 753,
+      "teacher": "woodbridge",
+      "room": "212",
+      "splitGroup": "split-1112-a",
+      "concurrentWith": "split-1112-a",
+      "grades": [
+        "12"
+      ]
+    },
+    {
+      "id": "b30",
+      "band": "11th/12th",
+      "course": "Lunch",
+      "subject": "Lunch",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 753,
+      "end": 780,
+      "teacher": null,
+      "room": "F.Hall",
+      "anchor": true,
+      "grades": [
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b31",
+      "band": "11th/12th",
+      "course": "Spanish II",
+      "subject": "Spanish",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 783,
+      "end": 828,
+      "teacher": "dodd",
+      "room": "213",
+      "splitGroup": "split-1112-b",
+      "grades": [
+        "12"
+      ]
+    },
+    {
+      "id": "b32",
+      "band": "11th/12th",
+      "course": "Rhetoric 3",
+      "subject": "Rhetoric",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 783,
+      "end": 828,
+      "teacher": "gentile",
+      "room": "212",
+      "splitGroup": "split-1112-b",
+      "concurrentWith": "split-1112-b",
+      "grades": [
+        "11"
+      ]
+    },
+    {
+      "id": "b33",
+      "band": "11th/12th",
+      "course": "Humanities 4",
+      "subject": "Humanities",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 832,
+      "end": 877,
+      "teacher": "dunlap",
+      "room": "213",
+      "note": "Confirmed roster: Dunlap — 11th/12th Humanities",
+      "grades": [
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b34",
+      "band": "11th/12th",
+      "course": "Humanities 4 (cont.)",
+      "subject": "Humanities",
+      "days": [
+        "M",
+        "Th"
+      ],
+      "start": 880,
+      "end": 925,
+      "teacher": "dunlap",
+      "room": "213",
+      "grades": [
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b35",
+      "band": "9th–12th",
+      "course": "Wellness (9–12)",
+      "subject": "Wellness",
+      "days": [
+        "Th"
+      ],
+      "start": 660,
+      "end": 705,
+      "teacher": "sorboro",
+      "room": "Gym",
+      "offsetNote": "Offsets Biblical/Applied Theology (M/W) — PRD 3.2 §12",
+      "grades": [
+        "9",
+        "10",
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b36",
+      "band": "9th–12th",
+      "course": "Wellness (9–12)",
+      "subject": "Wellness",
+      "days": [
+        "W"
+      ],
+      "start": 880,
+      "end": 925,
+      "teacher": "sorboro",
+      "room": "Gym",
+      "grades": [
+        "9",
+        "10",
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b37",
+      "band": "7th/8th",
+      "course": "Art",
+      "subject": "Art",
+      "days": [
+        "M",
+        "W"
+      ],
+      "start": 510,
+      "end": 555,
+      "teacher": "schwan",
+      "room": "209/210",
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b38",
+      "band": "7th/8th",
+      "course": "Music",
+      "subject": "Music",
+      "days": [
+        "Th"
+      ],
+      "start": 510,
+      "end": 555,
+      "teacher": "richards",
+      "room": "209/210",
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b39",
+      "band": "7th/8th",
+      "course": "Math (by level)",
+      "subject": "Math",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 558,
+      "end": 603,
+      "teacher": "various",
+      "room": "Various",
+      "mathBlock": true,
+      "note": "Staggered vs. 9–12 math by design (PRD 3.2 §8)",
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b40",
+      "band": "7th/8th",
+      "course": "Break / WWN",
+      "subject": "Break",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 603,
+      "end": 618,
+      "teacher": null,
+      "room": "211",
+      "anchor": true,
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b41",
+      "band": "7th/8th",
+      "course": "Bible",
+      "subject": "Bible",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 618,
+      "end": 648,
+      "teacher": "itano",
+      "room": "211",
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b42",
+      "band": "7th/8th",
+      "course": "Humanities 1",
+      "subject": "Humanities",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 651,
+      "end": 723,
+      "teacher": "itano",
+      "room": "211",
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b43",
+      "band": "7th/8th",
+      "course": "Lunch",
+      "subject": "Lunch",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 726,
+      "end": 753,
+      "teacher": null,
+      "room": "F.Hall",
+      "anchor": true,
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b44",
+      "band": "7th/8th",
+      "course": "Intermediate Logic (8th)",
+      "subject": "Logic",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 756,
+      "end": 786,
+      "teacher": "woodbridge",
+      "room": "204",
+      "splitGroup": "gl-a",
+      "grades": [
+        "8"
+      ]
+    },
+    {
+      "id": "b45",
+      "band": "7th/8th",
+      "course": "Grammar (7th)",
+      "subject": "Grammar",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 756,
+      "end": 786,
+      "teacher": "itano",
+      "room": "211",
+      "splitGroup": "gl-a",
+      "concurrentWith": "gl-a",
+      "grades": [
+        "7"
+      ]
+    },
+    {
+      "id": "b46",
+      "band": "7th/8th",
+      "course": "Introductory Logic (7th)",
+      "subject": "Logic",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 789,
+      "end": 819,
+      "teacher": "woodbridge",
+      "room": "204",
+      "splitGroup": "gl-b",
+      "grades": [
+        "7"
+      ]
+    },
+    {
+      "id": "b47",
+      "band": "7th/8th",
+      "course": "Grammar (8th)",
+      "subject": "Grammar",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 789,
+      "end": 819,
+      "teacher": "itano",
+      "room": "211",
+      "splitGroup": "gl-b",
+      "concurrentWith": "gl-b",
+      "grades": [
+        "8"
+      ]
+    },
+    {
+      "id": "b48",
+      "band": "7th/8th",
+      "course": "Earth Science",
+      "subject": "Science",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 822,
+      "end": 862,
+      "teacher": "gabrielson",
+      "room": "204",
+      "note": "Loop year: Earth (odd AYE) — PRD 3.5 §23",
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b49",
+      "band": "7th/8th",
+      "course": "Cornerstone / Service",
+      "subject": "Formation",
+      "days": [
+        "M"
+      ],
+      "start": 865,
+      "end": 891,
+      "teacher": "woodbridge",
+      "room": "204",
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b50",
+      "band": "7th/8th",
+      "course": "Fitness",
+      "subject": "Wellness",
+      "days": [
+        "W",
+        "Th"
+      ],
+      "start": 865,
+      "end": 891,
+      "teacher": "sorboro",
+      "room": "Gym",
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b51",
+      "band": "7th/8th",
+      "course": "Latin — 1st Form Beginner",
+      "subject": "Latin",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 894,
+      "end": 925,
+      "teacher": "howe",
+      "room": "211",
+      "splitGroup": "latin-78",
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b52",
+      "band": "7th/8th",
+      "course": "Latin — 1st Form Advanced",
+      "subject": "Latin",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 894,
+      "end": 925,
+      "teacher": "woodbridge",
+      "room": "204",
+      "splitGroup": "latin-78",
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b53",
+      "band": "11th/12th",
+      "course": "Math (by level)",
+      "subject": "Math",
+      "days": [
+        "T"
+      ],
+      "start": 495,
+      "end": 538,
+      "teacher": "various",
+      "room": "Various",
+      "mathBlock": true,
+      "grades": [
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b54",
+      "band": "11th/12th",
+      "course": "Music (Tue)",
+      "subject": "Music",
+      "days": [
+        "T"
+      ],
+      "start": 541,
+      "end": 584,
+      "teacher": "richards",
+      "room": "209/210",
+      "note": "Schedule w/ Art (semester offset)",
+      "grades": [
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b55",
+      "band": "11th/12th",
+      "course": "Chemistry (Tue)",
+      "subject": "Science",
+      "days": [
+        "T"
+      ],
+      "start": 587,
+      "end": 627,
+      "teacher": "gabrielson",
+      "room": "213",
+      "grades": [
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b56",
+      "band": "11th/12th",
+      "course": "Applied Theology (Tue)",
+      "subject": "Theology",
+      "days": [
+        "T"
+      ],
+      "start": 678,
+      "end": 721,
+      "teacher": "tbd-theo",
+      "room": "213",
+      "note": "Schedule w/ Wellness",
+      "grades": [
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b57",
+      "band": "11th/12th",
+      "course": "Lunch Release",
+      "subject": "Lunch",
+      "days": [
+        "T"
+      ],
+      "start": 723,
+      "end": 777,
+      "teacher": null,
+      "room": "F.Hall",
+      "anchor": true,
+      "note": "Source lists 12:00 — normalized +3 min past Applied Theology end (12:01)",
+      "grades": [
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b58",
+      "band": "11th/12th",
+      "course": "Spanish I (Tue)",
+      "subject": "Spanish",
+      "days": [
+        "T"
+      ],
+      "start": 780,
+      "end": 828,
+      "teacher": "dodd",
+      "room": "213",
+      "splitGroup": "split-1112-aT",
+      "grades": [
+        "11"
+      ]
+    },
+    {
+      "id": "b59",
+      "band": "11th/12th",
+      "course": "Senior Thesis (Tue)",
+      "subject": "Rhetoric",
+      "days": [
+        "T"
+      ],
+      "start": 780,
+      "end": 828,
+      "teacher": "woodbridge",
+      "room": "212",
+      "splitGroup": "split-1112-aT",
+      "concurrentWith": "split-1112-aT",
+      "grades": [
+        "12"
+      ]
+    },
+    {
+      "id": "b60",
+      "band": "11th/12th",
+      "course": "Spanish II (Tue)",
+      "subject": "Spanish",
+      "days": [
+        "T"
+      ],
+      "start": 831,
+      "end": 877,
+      "teacher": "dodd",
+      "room": "213",
+      "splitGroup": "split-1112-bT",
+      "grades": [
+        "12"
+      ]
+    },
+    {
+      "id": "b61",
+      "band": "11th/12th",
+      "course": "Rhetoric 3 (Tue)",
+      "subject": "Rhetoric",
+      "days": [
+        "T"
+      ],
+      "start": 831,
+      "end": 877,
+      "teacher": "gentile",
+      "room": "212",
+      "splitGroup": "split-1112-bT",
+      "grades": [
+        "11"
+      ]
+    },
+    {
+      "id": "b62",
+      "band": "11th/12th",
+      "course": "Humanities 4 (Tue)",
+      "subject": "Humanities",
+      "days": [
+        "T"
+      ],
+      "start": 880,
+      "end": 925,
+      "teacher": "dunlap",
+      "room": "213",
+      "grades": [
+        "11",
+        "12"
+      ]
+    },
+    {
+      "id": "b63",
+      "band": "9th/10th",
+      "course": "Latin 2nd Form (9th, Tue)",
+      "subject": "Latin",
+      "days": [
+        "T"
+      ],
+      "start": 541,
+      "end": 584,
+      "teacher": "woodbridge",
+      "room": "212",
+      "splitGroup": "cross-aT",
+      "grades": [
+        "9"
+      ]
+    },
+    {
+      "id": "b64",
+      "band": "9th/10th",
+      "course": "Rhetoric 2 (10th, Tue)",
+      "subject": "Rhetoric",
+      "days": [
+        "T"
+      ],
+      "start": 541,
+      "end": 584,
+      "teacher": "dodd",
+      "room": "204",
+      "splitGroup": "cross-aT",
+      "grades": [
+        "10"
+      ]
+    },
+    {
+      "id": "b65",
+      "band": "9th/10th",
+      "course": "Latin 3rd Form (10th, Tue)",
+      "subject": "Latin",
+      "days": [
+        "T"
+      ],
+      "start": 587,
+      "end": 627,
+      "teacher": "woodbridge",
+      "room": "212",
+      "splitGroup": "cross-bT",
+      "grades": [
+        "10"
+      ]
+    },
+    {
+      "id": "b66",
+      "band": "9th/10th",
+      "course": "Rhetoric 1 (9th, Tue)",
+      "subject": "Rhetoric",
+      "days": [
+        "T"
+      ],
+      "start": 587,
+      "end": 627,
+      "teacher": "dodd",
+      "room": "204",
+      "splitGroup": "cross-bT",
+      "grades": [
+        "9"
+      ]
+    },
+    {
+      "id": "b67",
+      "band": "9th/10th",
+      "course": "Lunch (Tue)",
+      "subject": "Lunch",
+      "days": [
+        "T"
+      ],
+      "start": 723,
+      "end": 777,
+      "teacher": null,
+      "room": "F.Hall",
+      "anchor": true,
+      "note": "Source lists 12:00 — normalized +3 min past Bio Lab end (12:01)",
+      "grades": [
+        "9",
+        "10"
+      ]
+    },
+    {
+      "id": "b68",
+      "band": "7th/8th",
+      "course": "Music (Tue)",
+      "subject": "Music",
+      "days": [
+        "T"
+      ],
+      "start": 495,
+      "end": 535,
+      "teacher": "richards",
+      "room": "209/210",
+      "note": "Alternate w/ Art",
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b69",
+      "band": "7th/8th",
+      "course": "Math (by level)",
+      "subject": "Math",
+      "days": [
+        "T"
+      ],
+      "start": 541,
+      "end": 584,
+      "teacher": "various",
+      "room": "Various",
+      "mathBlock": true,
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b70",
+      "band": "7th/8th",
+      "course": "Humanities A (Tue)",
+      "subject": "Humanities",
+      "days": [
+        "T"
+      ],
+      "start": 591,
+      "end": 625,
+      "teacher": "itano",
+      "room": "211",
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b71",
+      "band": "7th/8th",
+      "course": "Humanities B (Tue)",
+      "subject": "Humanities",
+      "days": [
+        "T"
+      ],
+      "start": 678,
+      "end": 720,
+      "teacher": "itano",
+      "room": "211",
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b72",
+      "band": "7th/8th",
+      "course": "Lunch (Tue)",
+      "subject": "Lunch",
+      "days": [
+        "T"
+      ],
+      "start": 720,
+      "end": 777,
+      "teacher": null,
+      "room": "F.Hall",
+      "anchor": true,
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b73",
+      "band": "7th/8th",
+      "course": "Grammar Combined (Tue)",
+      "subject": "Grammar",
+      "days": [
+        "T"
+      ],
+      "start": 780,
+      "end": 828,
+      "teacher": "itano",
+      "room": "211",
+      "note": "Draft: “not happy w/ this but seems the best arrangement”",
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b74",
+      "band": "7th/8th",
+      "course": "Earth Science (Tue)",
+      "subject": "Science",
+      "days": [
+        "T"
+      ],
+      "start": 831,
+      "end": 871,
+      "teacher": "gabrielson",
+      "room": "204",
+      "note": "Draft: “not happy w/ this but seems the best arrangement”",
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b75",
+      "band": "7th/8th",
+      "course": "Intro & Intermediate Logic (Tue)",
+      "subject": "Logic",
+      "days": [
+        "T"
+      ],
+      "start": 874,
+      "end": 899,
+      "teacher": "woodbridge",
+      "room": "204",
+      "note": "Draft: “not happy w/ this but seems the best arrangement”",
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b76",
+      "band": "7th/8th",
+      "course": "Latin — 1stF Beginner (Tue)",
+      "subject": "Latin",
+      "days": [
+        "T"
+      ],
+      "start": 899,
+      "end": 925,
+      "teacher": "howe",
+      "room": "211",
+      "splitGroup": "latin-78T",
+      "note": "Draft listed TBD Latin; assigned Howe per confirmed roster (7/8 Latin) now that Prima Latina is Matlin's [INFERRED — confirm]",
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b77",
+      "band": "7th/8th",
+      "course": "Latin — 1stF Advanced (Tue)",
+      "subject": "Latin",
+      "days": [
+        "T"
+      ],
+      "start": 899,
+      "end": 925,
+      "teacher": "woodbridge",
+      "room": "204",
+      "splitGroup": "latin-78T",
+      "grades": [
+        "7",
+        "8"
+      ]
+    },
+    {
+      "id": "b78",
+      "band": "Math: Algebra II (US)",
+      "course": "Algebra II",
+      "subject": "Math",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 558,
+      "end": 603,
+      "teacher": "gabrielson",
+      "room": "213",
+      "crossBand": true,
+      "note": "US math level — room per fixed map (Alg 2 → 213)",
+      "grades": []
+    },
+    {
+      "id": "b79",
+      "band": "Math: Algebra I (US)",
+      "course": "US Algebra I",
+      "subject": "Math",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 660,
+      "end": 705,
+      "teacher": "gabrielson",
+      "room": "202/203",
+      "crossBand": true,
+      "note": "Budget file: “may not be needed?” (Q C17)",
+      "grades": []
+    },
+    {
+      "id": "b80",
+      "band": "5th/6th",
+      "course": "Bible",
+      "subject": "Bible",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 510,
+      "end": 530,
+      "teacher": "rohde",
+      "room": "214",
+      "grades": [
+        "5",
+        "6"
+      ]
+    },
+    {
+      "id": "b81",
+      "band": "5th/6th",
+      "course": "Grammar 1 — Fix It",
+      "subject": "Grammar",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 530,
+      "end": 555,
+      "teacher": "rohde",
+      "room": "214",
+      "grades": [
+        "5",
+        "6"
+      ]
+    },
+    {
+      "id": "b82",
+      "band": "5th/6th",
+      "course": "Math (by level)",
+      "subject": "Math",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 558,
+      "end": 603,
+      "teacher": "various",
+      "room": "Various",
+      "mathBlock": true,
+      "grades": [
+        "5",
+        "6"
+      ]
+    },
+    {
+      "id": "b83",
+      "band": "5th/6th",
+      "course": "Memory Work / Logical Fallacies",
+      "subject": "Memory Work",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 615,
+      "end": 645,
+      "teacher": "rohde",
+      "room": "214",
+      "grades": [
+        "5",
+        "6"
+      ]
+    },
+    {
+      "id": "b84",
+      "band": "5th/6th",
+      "course": "Art",
+      "subject": "Art",
+      "days": [
+        "M",
+        "W"
+      ],
+      "start": 665,
+      "end": 705,
+      "teacher": "schwan",
+      "room": "209/210",
+      "grades": [
+        "5",
+        "6"
+      ]
+    },
+    {
+      "id": "b85",
+      "band": "5th/6th",
+      "course": "Music",
+      "subject": "Music",
+      "days": [
+        "Th"
+      ],
+      "start": 665,
+      "end": 705,
+      "teacher": "richards",
+      "room": "209/210",
+      "grades": [
+        "5",
+        "6"
+      ]
+    },
+    {
+      "id": "b86",
+      "band": "5th/6th",
+      "course": "Lunch",
+      "subject": "Lunch",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 708,
+      "end": 735,
+      "teacher": null,
+      "room": "F.Hall",
+      "anchor": true,
+      "grades": [
+        "5",
+        "6"
+      ]
+    },
+    {
+      "id": "b87",
+      "band": "5th/6th",
+      "course": "Spelling",
+      "subject": "Spelling",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 750,
+      "end": 780,
+      "teacher": "rohde",
+      "room": "214",
+      "grades": [
+        "5",
+        "6"
+      ]
+    },
+    {
+      "id": "b88",
+      "band": "5th/6th",
+      "course": "Latin — Latina Christiana",
+      "subject": "Latin",
+      "days": [
+        "M"
+      ],
+      "start": 783,
+      "end": 820,
+      "teacher": "adjei",
+      "room": "214",
+      "grades": [
+        "5",
+        "6"
+      ]
+    },
+    {
+      "id": "b89",
+      "band": "5th/6th",
+      "course": "LS Science — Physics",
+      "subject": "Science",
+      "days": [
+        "M",
+        "W"
+      ],
+      "start": 823,
+      "end": 863,
+      "teacher": "weir",
+      "room": "214",
+      "grades": [
+        "5",
+        "6"
+      ]
+    },
+    {
+      "id": "b90",
+      "band": "5th/6th",
+      "course": "Latin — Latina Christiana",
+      "subject": "Latin",
+      "days": [
+        "Th"
+      ],
+      "start": 823,
+      "end": 863,
+      "teacher": "adjei",
+      "room": "214",
+      "grades": [
+        "5",
+        "6"
+      ]
+    },
+    {
+      "id": "b91",
+      "band": "5th/6th",
+      "course": "Humanities",
+      "subject": "Humanities",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 866,
+      "end": 925,
+      "teacher": "rohde",
+      "room": "214",
+      "note": "Rohde per confirmed roster (5th/6th Grade) — Dunlap is 11/12 Humanities only [INFERRED — confirm]",
+      "grades": [
+        "5",
+        "6"
+      ]
+    },
+    {
+      "id": "b92",
+      "band": "3rd/4th",
+      "course": "Bible",
+      "subject": "Bible",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 510,
+      "end": 530,
+      "teacher": "matlin",
+      "room": "206",
+      "grades": [
+        "3",
+        "4"
+      ]
+    },
+    {
+      "id": "b93",
+      "band": "3rd/4th",
+      "course": "Handwriting",
+      "subject": "Handwriting",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 530,
+      "end": 576,
+      "teacher": "matlin",
+      "room": "206",
+      "grades": [
+        "3",
+        "4"
+      ]
+    },
+    {
+      "id": "b94",
+      "band": "3rd/4th",
+      "course": "Math (by level)",
+      "subject": "Math",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 576,
+      "end": 621,
+      "teacher": "various",
+      "room": "Various",
+      "mathBlock": true,
+      "grades": [
+        "3",
+        "4"
+      ]
+    },
+    {
+      "id": "b95",
+      "band": "3rd/4th",
+      "course": "Reading",
+      "subject": "Reading",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 640,
+      "end": 665,
+      "teacher": "matlin",
+      "room": "206",
+      "grades": [
+        "3",
+        "4"
+      ]
+    },
+    {
+      "id": "b96",
+      "band": "3rd/4th",
+      "course": "Lunch",
+      "subject": "Lunch",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 705,
+      "end": 730,
+      "teacher": null,
+      "room": "F.Hall",
+      "anchor": true,
+      "grades": [
+        "3",
+        "4"
+      ]
+    },
+    {
+      "id": "b97",
+      "band": "3rd/4th",
+      "course": "Art",
+      "subject": "Art",
+      "days": [
+        "M",
+        "W"
+      ],
+      "start": 740,
+      "end": 780,
+      "teacher": "schwan",
+      "room": "209/210",
+      "grades": [
+        "3",
+        "4"
+      ]
+    },
+    {
+      "id": "b98",
+      "band": "3rd/4th",
+      "course": "Music",
+      "subject": "Music",
+      "days": [
+        "Th"
+      ],
+      "start": 740,
+      "end": 780,
+      "teacher": "richards",
+      "room": "209/210",
+      "grades": [
+        "3",
+        "4"
+      ]
+    },
+    {
+      "id": "b99",
+      "band": "3rd/4th",
+      "course": "Memory Work",
+      "subject": "Memory Work",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 823,
+      "end": 853,
+      "teacher": "norman",
+      "room": "206",
+      "grades": [
+        "3",
+        "4"
+      ]
+    },
+    {
+      "id": "b100",
+      "band": "3rd/4th",
+      "course": "GS Latin — Prima Latina",
+      "subject": "Latin",
+      "days": [
+        "T",
+        "Th"
+      ],
+      "start": 894,
+      "end": 920,
+      "teacher": "matlin",
+      "room": "206",
+      "note": "Confirmed roster + Latin Sequencing: Matlin (Howe = 7/8 Latin only)",
+      "grades": [
+        "3",
+        "4"
+      ]
+    },
+    {
+      "id": "b101",
+      "band": "3rd/4th + 5th/6th",
+      "course": "Wellness (3–6)",
+      "subject": "Wellness",
+      "days": [
+        "W",
+        "Th"
+      ],
+      "start": 783,
+      "end": 820,
+      "teacher": "sorboro",
+      "room": "Gym",
+      "grades": [
+        "3",
+        "4",
+        "5",
+        "6"
+      ]
+    },
+    {
+      "id": "b102",
+      "band": "1st + 2nd",
+      "course": "Wellness (1–2)",
+      "subject": "Wellness",
+      "days": [
+        "W",
+        "Th"
+      ],
+      "start": 735,
+      "end": 775,
+      "teacher": "sorboro",
+      "room": "Gym",
+      "grades": [
+        "1",
+        "2"
+      ]
+    },
+    {
+      "id": "b103",
+      "band": "2nd",
+      "course": "Bible",
+      "subject": "Bible",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 510,
+      "end": 530,
+      "teacher": "morris",
+      "room": "205",
+      "grades": [
+        "2"
+      ]
+    },
+    {
+      "id": "b104",
+      "band": "2nd",
+      "course": "Handwriting",
+      "subject": "Handwriting",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 530,
+      "end": 576,
+      "teacher": "morris",
+      "room": "205",
+      "grades": [
+        "2"
+      ]
+    },
+    {
+      "id": "b105",
+      "band": "2nd",
+      "course": "Math (by level)",
+      "subject": "Math",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 576,
+      "end": 621,
+      "teacher": "various",
+      "room": "Various",
+      "mathBlock": true,
+      "grades": [
+        "2"
+      ]
+    },
+    {
+      "id": "b106",
+      "band": "2nd",
+      "course": "Reading / Grammar",
+      "subject": "Reading",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 665,
+      "end": 705,
+      "teacher": "morris",
+      "room": "205",
+      "grades": [
+        "2"
+      ]
+    },
+    {
+      "id": "b107",
+      "band": "2nd",
+      "course": "Lunch",
+      "subject": "Lunch",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 708,
+      "end": 735,
+      "teacher": null,
+      "room": "F.Hall",
+      "anchor": true,
+      "grades": [
+        "2"
+      ]
+    },
+    {
+      "id": "b108",
+      "band": "2nd",
+      "course": "Spelling / Phonics",
+      "subject": "Spelling",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 813,
+      "end": 849,
+      "teacher": "morris",
+      "room": "205",
+      "grades": [
+        "2"
+      ]
+    },
+    {
+      "id": "b109",
+      "band": "2nd",
+      "course": "Art",
+      "subject": "Art",
+      "days": [
+        "M",
+        "W"
+      ],
+      "start": 880,
+      "end": 910,
+      "teacher": "schwan",
+      "room": "209/210",
+      "grades": [
+        "2"
+      ]
+    },
+    {
+      "id": "b110",
+      "band": "2nd",
+      "course": "Music",
+      "subject": "Music",
+      "days": [
+        "Th"
+      ],
+      "start": 880,
+      "end": 910,
+      "teacher": "richards",
+      "room": "209/210",
+      "grades": [
+        "2"
+      ]
+    },
+    {
+      "id": "b111",
+      "band": "1st",
+      "course": "Reading Skills",
+      "subject": "Reading",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 510,
+      "end": 573,
+      "teacher": "wolfe",
+      "room": "207/208",
+      "grades": [
+        "1"
+      ]
+    },
+    {
+      "id": "b112",
+      "band": "1st",
+      "course": "Math (Mammoth 1)",
+      "subject": "Math",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 576,
+      "end": 621,
+      "teacher": "wolfe",
+      "room": "207/208",
+      "grades": [
+        "1"
+      ]
+    },
+    {
+      "id": "b113",
+      "band": "1st",
+      "course": "Handwriting",
+      "subject": "Handwriting",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 640,
+      "end": 672,
+      "teacher": "wolfe",
+      "room": "207/208",
+      "grades": [
+        "1"
+      ]
+    },
+    {
+      "id": "b114",
+      "band": "1st",
+      "course": "Lunch",
+      "subject": "Lunch",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 708,
+      "end": 735,
+      "teacher": null,
+      "room": "F.Hall",
+      "anchor": true,
+      "grades": [
+        "1"
+      ]
+    },
+    {
+      "id": "b115",
+      "band": "1st",
+      "course": "Nature Study",
+      "subject": "Nature Study",
+      "days": [
+        "M",
+        "W"
+      ],
+      "start": 785,
+      "end": 825,
+      "teacher": "wolfe",
+      "room": "207/208",
+      "grades": [
+        "1"
+      ]
+    },
+    {
+      "id": "b116",
+      "band": "1st",
+      "course": "Art",
+      "subject": "Art",
+      "days": [
+        "M",
+        "W"
+      ],
+      "start": 845,
+      "end": 875,
+      "teacher": "schwan",
+      "room": "209/210",
+      "grades": [
+        "1"
+      ]
+    },
+    {
+      "id": "b117",
+      "band": "1st",
+      "course": "Music",
+      "subject": "Music",
+      "days": [
+        "Th"
+      ],
+      "start": 845,
+      "end": 875,
+      "teacher": "richards",
+      "room": "209/210",
+      "grades": [
+        "1"
+      ]
+    },
+    {
+      "id": "b118",
+      "band": "1st",
+      "course": "Memory Work",
+      "subject": "Memory Work",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 890,
+      "end": 925,
+      "teacher": "wolfe",
+      "room": "207/208",
+      "note": "Wolfe per confirmed roster (Norman = K + 3rd/4th support) [INFERRED — confirm]",
+      "grades": [
+        "1"
+      ]
+    },
+    {
+      "id": "b119",
+      "band": "K",
+      "course": "Morning Learning",
+      "subject": "Core",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 510,
+      "end": 630,
+      "teacher": "nowacki",
+      "room": "C130",
+      "grades": [
+        "K"
+      ]
+    },
+    {
+      "id": "b120",
+      "band": "K",
+      "course": "Handwriting",
+      "subject": "Handwriting",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 648,
+      "end": 750,
+      "teacher": "nowacki",
+      "room": "C130",
+      "grades": [
+        "K"
+      ]
+    },
+    {
+      "id": "b121",
+      "band": "K",
+      "course": "Lunch",
+      "subject": "Lunch",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 750,
+      "end": 777,
+      "teacher": null,
+      "room": "F.Hall",
+      "anchor": true,
+      "grades": [
+        "K"
+      ]
+    },
+    {
+      "id": "b122",
+      "band": "K",
+      "course": "Afternoon Learning",
+      "subject": "Core",
+      "days": [
+        "M",
+        "W",
+        "Th"
+      ],
+      "start": 780,
+      "end": 816,
+      "teacher": "nowacki",
+      "room": "C130",
+      "grades": [
+        "K"
+      ]
+    },
+    {
+      "id": "b123",
+      "band": "K",
+      "course": "Music (in K room)",
+      "subject": "Music",
+      "days": [
+        "T"
+      ],
+      "start": 655,
+      "end": 675,
+      "teacher": "richards",
+      "room": "C130",
+      "grades": [
+        "K"
+      ]
+    }
+  ],
+  "teachers": [
+    {
+      "id": "adjei",
+      "name": "Adjei, Kristy",
+      "rate": null,
+      "status": "Admin",
+      "subjects": [
+        "Formation",
+        "Latin"
+      ],
+      "note": "Openings & formations; Latina Christiana (5th/6th) per Latin Sequencing"
+    },
+    {
+      "id": "andersen",
+      "name": "Andersen, Genelle",
+      "rate": 0,
+      "status": "RPT",
+      "subjects": [
+        "Formation",
+        "Math"
+      ],
+      "note": "US Formation; Alg II listed at $0 in budget"
+    },
+    {
+      "id": "dodd",
+      "name": "Dodd, Catherine",
+      "rate": 34,
+      "status": "RPT",
+      "subjects": [
+        "Rhetoric",
+        "Spanish"
+      ],
+      "note": "Confirmed: Spanish I & II, Rhetoric I & II"
+    },
+    {
+      "id": "dunlap",
+      "name": "Dunlap, Jenni",
+      "rate": 34,
+      "status": "RPT",
+      "subjects": [
+        "Humanities"
+      ],
+      "note": "Confirmed: 11th/12th Humanities"
+    },
+    {
+      "id": "gabrielson",
+      "name": "Gabrielson, Kelly",
+      "rate": 36,
+      "status": "RPT",
+      "subjects": [
+        "Science",
+        "Math"
+      ],
+      "maxClasses": 4,
+      "note": "Confirmed: Science & Math Lead · ⚠ 4-class cap (Teachers sheet)"
+    },
+    {
+      "id": "gentile",
+      "name": "Gentile, Missy",
+      "rate": null,
+      "status": "New",
+      "subjects": [
+        "Rhetoric",
+        "Humanities",
+        "Theology"
+      ],
+      "note": "Confirmed roster: Rhetoric III, Applied Humanities — confirm whether 'Applied Humanities' is the Applied Theology course"
+    },
+    {
+      "id": "dockery",
+      "name": "Dockery, Julie",
+      "rate": null,
+      "status": "—",
+      "subjects": [],
+      "note": "On confirmed roster — teaching position not listed (confirm role)"
+    },
+    {
+      "id": "howe",
+      "name": "Howe, Nicole",
+      "rate": 32,
+      "status": "RPT",
+      "subjects": [
+        "Latin"
+      ],
+      "note": "Confirmed: 7th/8th Latin"
+    },
+    {
+      "id": "itano",
+      "name": "Itano, Brandon",
+      "rate": 32,
+      "status": "RPT",
+      "subjects": [
+        "Humanities",
+        "Bible",
+        "Grammar",
+        "Math"
+      ],
+      "note": "Confirmed: 7/8 Humanities, Bible, Grammar + 9/10 Humanities"
+    },
+    {
+      "id": "lee",
+      "name": "Lee, Jamie",
+      "rate": 34,
+      "status": "RPT",
+      "subjects": [
+        "Math"
+      ],
+      "note": "Confirmed: Math"
+    },
+    {
+      "id": "matlin",
+      "name": "Matlin, Kathy",
+      "rate": 38,
+      "status": "RFT",
+      "subjects": [
+        "Homeroom",
+        "Latin"
+      ],
+      "note": "Confirmed: 3rd/4th Grade · Prima Latina per Latin Sequencing"
+    },
+    {
+      "id": "morris",
+      "name": "Morris, Anna",
+      "rate": 30,
+      "status": "NFT",
+      "subjects": [
+        "Math"
+      ],
+      "note": "Confirmed: 2nd Grade"
+    },
+    {
+      "id": "norman",
+      "name": "Norman, Kathryn",
+      "rate": 30,
+      "status": "RFT",
+      "subjects": [
+        "Homeroom"
+      ],
+      "note": "Confirmed: Kindergarten + 3rd/4th Grade support"
+    },
+    {
+      "id": "nowacki",
+      "name": "Nowacki, Viola",
+      "rate": 32,
+      "status": "RFT",
+      "subjects": [
+        "Homeroom",
+        "Math"
+      ],
+      "note": "Confirmed: Kindergarten — Room C130"
+    },
+    {
+      "id": "richards",
+      "name": "Richards, Debby",
+      "rate": 36,
+      "status": "RPT",
+      "subjects": [
+        "Music"
+      ],
+      "allowedDays": [
+        "T",
+        "Th"
+      ],
+      "windows": {
+        "T": [
+          465,
+          945
+        ],
+        "Th": [
+          465,
+          930
+        ]
+      },
+      "note": "Tue 7:45–3:45 · Thu 7:45–3:30"
+    },
+    {
+      "id": "rohde",
+      "name": "Rohde, Greta",
+      "rate": 30,
+      "status": "NPT",
+      "subjects": [
+        "Homeroom",
+        "Bible",
+        "Math",
+        "Humanities"
+      ],
+      "note": "Confirmed: 5th/6th Grade"
+    },
+    {
+      "id": "schwan",
+      "name": "Schwan, Karen",
+      "rate": 34,
+      "status": "RPT",
+      "subjects": [
+        "Art"
+      ],
+      "allowedDays": [
+        "M",
+        "W"
+      ],
+      "note": "2-day specialist, complementary to Music [INFERRED M/W — confirm]"
+    },
+    {
+      "id": "sorboro",
+      "name": "Sorboro, Janine",
+      "rate": 34,
+      "status": "RPT",
+      "subjects": [
+        "Wellness"
+      ],
+      "allowedDays": [
+        "W",
+        "Th"
+      ],
+      "windows": {
+        "W": [
+          720,
+          945
+        ],
+        "Th": [
+          645,
+          870
+        ]
+      },
+      "note": "Wed 12:00–3:45 · Thu 10:45–2:30"
+    },
+    {
+      "id": "weir",
+      "name": "Weir, Sarah",
+      "rate": null,
+      "flat": 40000,
+      "status": "NFT",
+      "subjects": [
+        "Math",
+        "Science"
+      ],
+      "note": "Confirmed: Science / Math"
+    },
+    {
+      "id": "wolfe",
+      "name": "Wolfe, Linda",
+      "rate": 39,
+      "status": "RFT",
+      "subjects": [
+        "Homeroom",
+        "Math"
+      ],
+      "note": "Confirmed: 1st Grade"
+    },
+    {
+      "id": "woodbridge",
+      "name": "Woodbridge, Dave",
+      "rate": 34,
+      "status": "RFT",
+      "subjects": [
+        "Latin",
+        "Logic",
+        "Theology",
+        "Rhetoric"
+      ],
+      "note": "Confirmed: Latin, Theology, Senior Thesis"
+    },
+    {
+      "id": "tbd-theo",
+      "name": "TBD (Theology)",
+      "rate": 33.72,
+      "status": "TBD",
+      "subjects": [
+        "Theology"
+      ],
+      "note": "Applied Theology owner pending — roster lists Gentile for 'Applied Humanities'; confirm same course"
+    },
+    {
+      "id": "various",
+      "name": "Various (Math)",
+      "rate": null,
+      "status": "—",
+      "subjects": [
+        "Math"
+      ],
+      "virtual": true,
+      "note": "Cross-graded math hour — multiple level teachers"
+    }
+  ],
+  "params": {
+    "dayStart": 465,
+    "dayEnd": 945,
+    "budgetMin": 480,
+    "transition": 3,
+    "planRatio": 15,
+    "creditWeeks": 32,
+    "setup": 5,
+    "teardown": 5,
+    "cleaning": 10,
+    "idle": 10
+  },
+  "customRooms": [],
+  "extraGaps": {},
+  "deletedGaps": [],
+  "gapOv": {},
+  "dismissed": [],
+  "createdAt": "2026-08-02T15:24:29.733Z"
+}

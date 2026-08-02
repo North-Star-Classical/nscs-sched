@@ -1,20 +1,24 @@
 {
   "name": "nscs-schedule-planner",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/North-Star-Classical/nscs-sched.git"
   },
-  "description": "North Star Classical Christian School — AYE 2027 schedule planning tool. Single-file standalone React app with localStorage persistence.",
+  "description": "North Star Classical Christian School — AYE 2027 schedule planning tool. Supabase-backed React app deployed to Cloudflare Pages.",
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "build:test": "NSCS_TEST_MODE=1 node scripts/build.mjs",
     "test": "node test/smoke.test.cjs",
     "test:e2e": "node test/e2e.test.cjs",
-    "test:all": "node test/smoke.test.cjs && node test/e2e.test.cjs"
+    "test:all": "node test/smoke.test.cjs && node test/e2e.test.cjs",
+    "extract-seed": "node scripts/extract-seed.mjs",
+    "seed": "node scripts/seed.mjs"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.49.0",
     "esbuild": "^0.24.0",
     "jsdom": "^25.0.0",
     "react": "^18.2.0",

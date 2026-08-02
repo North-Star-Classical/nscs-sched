@@ -1,94 +1,60 @@
 # NSCS Schedule Planner — AYE 2027
 
-Schedule planning tool for North Star Classical Christian School's first full K–12
-year. Ships as a **single standalone HTML file** (`dist/nscs-schedule-planner.html`)
-that runs in any modern browser with no server — open the file and go. All data
-persists in the browser's localStorage.
+Schedule planning tool for North Star Classical Christian School's first full K–12 year.
 
+**Production:** [schedule.nsclassical.com](https://schedule.nsclassical.com) (Cloudflare Pages)  
 **Repository:** [github.com/North-Star-Classical/nscs-sched](https://github.com/North-Star-Classical/nscs-sched) (private)
 
-## Quick start
+Authenticated users share schedules via **Supabase** (Postgres + invite-only Auth). The app ships as a static build in `dist/index.html`.
+
+## Quick start (developers)
 
 ```bash
 git clone https://github.com/North-Star-Classical/nscs-sched.git
 cd nscs-sched
 npm install
-npm run build      # src/App.jsx  ->  dist/nscs-schedule-planner.html
-npm run test:all   # smoke test + 41-check end-to-end suite
+cp .env.example .env   # add SUPABASE_URL + SUPABASE_ANON_KEY for production builds
+npm run build
+npm run test:all
 ```
 
-Open `dist/nscs-schedule-planner.html` in a browser to use the app.
+Open `dist/index.html` locally (or serve with `python3 -m http.server` in `dist/`).
 
 ## Project layout
 
 ```
-src/App.jsx            All application code (single React component file, ~1,900 lines)
-scripts/build.mjs      Build pipeline (JSX -> standalone HTML)
-dist/                  Built output (committed so non-developers can download it)
-test/smoke.test.cjs    Renders the built app in jsdom; fails on any boot error
-test/e2e.test.cjs      41-check suite: tabs, save/load, auto-save, browser-reopen recovery
-docs/                  Change logs and session notes
+src/App.jsx            Main schedule UI (~1,900 lines)
+src/storage.js         Supabase / in-memory persistence adapter
+src/auth.js            Invite-only login gate
+src/bootstrap.js       Build-time config injection
+scripts/build.mjs      JSX → dist/index.html
+scripts/seed.mjs       Seed default plan to Supabase (service role)
+supabase/migrations/   SQL schema + RLS policies
+dist/                  Built output (index.html for Cloudflare Pages)
+test/                  Smoke + 41-check e2e suite
+docs/DEPLOY.md         Cloudflare Pages + custom domain setup
 ```
 
 ## Architecture
 
-- **No framework tooling** — deliberately not a Vite/CRA project. The app is one
-  JSX file compiled by esbuild into an IIFE and inlined into an HTML shell that
-  loads React 18 UMD, Tailwind 2.2.19, and html2pdf 0.10.1 from CDNs. This keeps
-  the deliverable a single file that school staff can double-click.
-- **State**: React `useState` throughout, no external state library.
-- **Persistence** (browser localStorage):
-  - `nscs_plans` — array of named plan snapshots (explicit saves via Plans tab)
-  - `nscs_autosave` — debounced (~1 s) snapshot of the working state; restored on
-    boot if newer than the last explicit save ("crash recovery")
-  - Snapshot fields: `blocks, teachers, customRooms, extraGaps, deletedGaps,
-    gapOv, params, dismissed, name, createdAt, updatedAt`
-- **`DEFAULT_PARAMS`** (top of `App.jsx`) is the single source of truth for
-  schedule parameters. School day 7:45 AM–3:45 PM, 480-min budget, 3-min
-  transitions, 15% plan ratio, 5-min setup/teardown, 10-min cleaning, 10-min idle
-  threshold. `loadPlan` merges saved params **over** defaults so plans saved by
-  older versions load safely.
+- **UI:** React 18 (single component), Tailwind 2, html2pdf
+- **Auth:** Supabase Auth — email/password, invite-only (disable public sign-up)
+- **Data:** `plans` + `plan_autosaves` tables with RLS (authenticated read/write)
+- **Deploy:** Cloudflare Pages from `main`, env vars `SUPABASE_URL` + `SUPABASE_ANON_KEY`
+- **Version:** `meta name="app-version"` in HTML + `package.json` (currently 1.1.0)
 
-## Domain notes
+## Deploy
 
-- **Teachers**: 23 seed entries = 21 confirmed staff + `tbd-theo` (unfilled
-  Applied Theology position) + `various`.
-- **Schedule**: 124 seed blocks across grade bands, Mon–Thu (4-day week).
-  Blocks use a `grades[]` array; `BAND_GRADES` maps bands to grade lists.
-- **Conflict engine**: detects teacher/room/time collisions; dismissals persist
-  per-plan via signature strings in `dismissed[]`.
-- Tuesday 10:00–11:15 AM is a BSF (Bible Study Fellowship) facility blackout —
-  relevant to room analysis, not enforced by the app.
+See [docs/DEPLOY.md](docs/DEPLOY.md) for Cloudflare Pages, `schedule.nsclassical.com`, and seeding production data.
 
-## Build pipeline — why it's paranoid
+## Supabase setup
 
-The build converts `import React ... from "react"` into a UMD global destructure.
-An earlier version did this with an exact-string replace that silently missed,
-shipping a Node-style `require("react")` call that crashed the app in the browser
-("Uncaught Error: Script error."). The current pipeline:
+See [supabase/README.md](supabase/README.md) — run migration SQL, disable public signup, invite users.
 
-1. Regex-matches any form of the React import — **fails the build** if it doesn't
-   transform exactly one.
-2. **Fails the build** if any `import`/`export` statement survives stripping.
-3. **Fails the build** if `require(` appears in the compiled bundle.
+## Tests
 
-Keep those checks if you rework the build. The e2e test also boots the *built*
-HTML (not the source) in jsdom, so a broken bundle can't pass CI.
+```bash
+npm run test:all   # builds in test mode (no Supabase required), 41 checks
+```
 
-## Known limitations / next steps
-
-- localStorage is per-browser, per-device; clearing site data deletes plans.
-  A JSON export/import feature is the highest-value next addition (real backups
-  + moving plans between machines).
-- PDF generation (html2pdf) requires a real browser; it's stubbed in tests.
-- Planned but unbuilt: student-placement layer for cross-band math/Latin;
-  server-side PDF with selectable text.
-
-## Open scheduling questions (carried from planning sessions)
-
-- Applied Theology hire (Q D20); Gentile "Applied Humanities" vs "Applied
-  Theology" naming confirmation
-- Sorboro Thursday availability window (Q D22)
-- Whether an Upper School Algebra I section is needed (Q C17)
-- Plan ratio 15% vs 20% (Q A2)
-- Seed blocks not yet verified against Kristy's finalized schedules
+CI runs the same suite on push to `main` via GitHub Actions.

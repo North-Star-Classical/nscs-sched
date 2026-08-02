@@ -343,53 +343,62 @@ export default function App() {
   const [newRoomInput, setNewRoomInput] = useState("");   // tid -> [{id,label,days,start,end}]
   const [deletedGaps, setDeletedGaps] = useState([]); // gapKeyFor() strings removed by the user
   const [showDismissed, setShowDismissed] = useState(false);
+  const [plansLoading, setPlansLoading] = useState(true);
 
-  // Load plans from localStorage on mount
+  // Load plans from storage on mount
   React.useEffect(() => {
-    try {
-      const stored = localStorage.getItem("nscs_plans");
-      let loaded = [];
-      if (stored) {
-        loaded = JSON.parse(stored);
-        setPlans(loaded);
-      }
-      // Crash recovery: if auto-saved working state is newer than the last explicit save, restore it
-      let restoredAuto = false;
+    var cancelled = false;
+    (async function () {
       try {
-        const auto = localStorage.getItem("nscs_autosave");
-        if (auto) {
-          const snap = JSON.parse(auto);
-          const lastSavedAt = loaded.length ? (loaded[loaded.length - 1].updatedAt || "") : "";
-          if (snap && snap.blocks && (!lastSavedAt || (snap.updatedAt || "") > lastSavedAt)) {
-            loadPlan(snap);
-            restoredAuto = true;
-            flash("Restored unsaved work from auto-save — click Save in the Plans tab to keep it");
-          }
+        var store = getStorage();
+        var loaded = await store.loadPlans();
+        if (cancelled) return;
+        setPlans(loaded);
+        var restoredAuto = false;
+        if (loaded.length > 0) {
+          var last = loaded.reduce(function (a, b) {
+            return (a.updatedAt || "") >= (b.updatedAt || "") ? a : b;
+          }, loaded[0]);
+          try {
+            var auto = await store.loadAutosave(last.id);
+            if (auto && auto.blocks) {
+              var lastSavedAt = last.updatedAt || "";
+              if (!lastSavedAt || (auto.updatedAt || "") > lastSavedAt) {
+                loadPlan(auto, { silent: true });
+                restoredAuto = true;
+                flash("Restored unsaved work from auto-save — click Save in the Plans tab to keep it");
+              }
+            }
+          } catch (e) { /* corrupt autosave — ignore */ }
+          if (!restoredAuto) loadPlan(last, { silent: true });
         }
-      } catch (e) { /* corrupt autosave — ignore and fall through */ }
-      if (!restoredAuto && loaded.length > 0) {
-        const last = loaded[loaded.length - 1];
-        loadPlan(last);
+      } catch (e) {
+        console.error("Failed to load plans:", e);
+        flash("Could not load plans — check your connection");
+      } finally {
+        if (!cancelled) {
+          bootedRef.current = true;
+          setPlansLoading(false);
+        }
       }
-    } catch (e) {
-      console.error("Failed to load plans:", e);
-    }
-    bootedRef.current = true;
+    })();
+    return function () { cancelled = true; };
   }, []);
 
-  // Auto-save working state (debounced 1s) so browser close / crash never loses work
+  // Auto-save working state (debounced 1s)
   React.useEffect(() => {
-    if (!bootedRef.current) return;
-    const timer = setTimeout(() => {
-      try {
-        localStorage.setItem("nscs_autosave", JSON.stringify({
-          id: currentPlanId, name: planName, blocks, teachers, customRooms,
-          extraGaps, deletedGaps, gapOv, params, dismissed,
-          updatedAt: new Date().toISOString(),
-        }));
-      } catch (e) { /* storage full — explicit save will surface the error */ }
+    if (!bootedRef.current || !currentPlanId) return;
+    var timer = setTimeout(function () {
+      var snap = {
+        id: currentPlanId, name: planName, blocks: blocks, teachers: teachers, customRooms: customRooms,
+        extraGaps: extraGaps, deletedGaps: deletedGaps, gapOv: gapOv, params: params, dismissed: dismissed,
+        updatedAt: new Date().toISOString(),
+      };
+      getStorage().saveAutosave(currentPlanId, snap).catch(function (e) {
+        console.error("Autosave failed:", e);
+      });
     }, 1000);
-    return () => clearTimeout(timer);
+    return function () { clearTimeout(timer); };
   }, [blocks, teachers, customRooms, extraGaps, deletedGaps, gapOv, params, dismissed, planName, currentPlanId]);
   const sigOf = (c) => `${c.type}|${(c.blocks || []).map((b) => b.id).sort().join(",")}|${c.bandRef || ""}`;
 
@@ -806,8 +815,8 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workload, blocks, teachers, params, gapOv, extraGaps, deletedGaps]);
 
-  // Plan management (persistence via localStorage)
-  const loadPlan = (plan) => {
+  // Plan management (persistence via storage adapter)
+  const loadPlan = (plan, opts) => {
     if (!plan) return;
     setBlocks(plan.blocks || []);
     setTeachers(plan.teachers || []);
@@ -819,66 +828,90 @@ export default function App() {
     setDismissed(plan.dismissed || []);
     setPlanName(plan.name || "Untitled Plan");
     setCurrentPlanId(plan.id);
-    flash(`Loaded plan "${plan.name}"`);
+    if (!opts || !opts.silent) flash(`Loaded plan "${plan.name}"`);
   };
-  const savePlan = () => {
+  const savePlan = async () => {
     const snapshot = { blocks, teachers, customRooms, extraGaps, deletedGaps, gapOv, params, dismissed, name: planName || "Untitled Plan", updatedAt: new Date().toISOString() };
+    let id = currentPlanId;
     let updated;
     if (currentPlanId && plans.some((p) => p.id === currentPlanId)) {
       updated = plans.map((p) => (p.id === currentPlanId ? { ...p, ...snapshot } : p));
     } else {
-      // No matching plan (fresh session or plan was deleted) — create one instead of losing work
-      const id = currentPlanId || `plan-${Date.now()}`;
+      id = currentPlanId || `plan-${Date.now()}`;
       updated = [...plans, { id, createdAt: new Date().toISOString(), ...snapshot }];
       setCurrentPlanId(id);
     }
-    setPlans(updated);
+    const toSave = updated.find((p) => p.id === id);
     try {
-      localStorage.setItem("nscs_plans", JSON.stringify(updated));
+      await getStorage().upsertPlan(toSave);
+      await getStorage().clearAutosave(id);
+      setPlans(updated);
       flash(`Saved "${snapshot.name}"`);
     } catch (e) {
-      flash("Failed to save (storage full?)");
+      console.error(e);
+      flash("Failed to save — check your connection");
     }
   };
-  const createPlan = () => {
+  const createPlan = async () => {
     const name = newPlanName.trim() || "New Plan";
     const id = `plan-${Date.now()}`;
     const newPlan = { id, name, blocks: [], teachers: SEED_TEACHERS.slice(), customRooms: [], extraGaps: {}, deletedGaps: [], gapOv: {}, params: { ...DEFAULT_PARAMS }, dismissed: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-    const updated = [...plans, newPlan];
-    setPlans(updated);
-    localStorage.setItem("nscs_plans", JSON.stringify(updated));
-    loadPlan(newPlan);
-    setNewPlanName("");
-    flash(`Created "${name}"`);
+    try {
+      await getStorage().upsertPlan(newPlan);
+      const updated = [...plans, newPlan];
+      setPlans(updated);
+      loadPlan(newPlan);
+      setNewPlanName("");
+      flash(`Created "${name}"`);
+    } catch (e) {
+      console.error(e);
+      flash("Failed to create plan");
+    }
   };
-  const duplicatePlan = (planId) => {
+  const duplicatePlan = async (planId) => {
     const source = plans.find((p) => p.id === planId);
     if (!source) return;
     const id = `plan-${Date.now()}`;
     const dup = { ...source, id, name: source.name + " (copy)", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-    const updated = [...plans, dup];
-    setPlans(updated);
-    localStorage.setItem("nscs_plans", JSON.stringify(updated));
-    loadPlan(dup);
-    flash(`Duplicated "${source.name}"`);
-  };
-  const deletePlan = (planId) => {
-    const updated = plans.filter((p) => p.id !== planId);
-    setPlans(updated);
-    localStorage.setItem("nscs_plans", JSON.stringify(updated));
-    if (currentPlanId === planId) {
-      if (updated.length > 0) loadPlan(updated[0]); else setCurrentPlanId(null);
+    try {
+      await getStorage().upsertPlan(dup);
+      const updated = [...plans, dup];
+      setPlans(updated);
+      loadPlan(dup);
+      flash(`Duplicated "${source.name}"`);
+    } catch (e) {
+      console.error(e);
+      flash("Failed to duplicate plan");
     }
-    flash("Plan deleted");
   };
-  const renamePlan = (planId, newName) => {
-    const updated = plans.map((p) =>
-      p.id === planId ? { ...p, name: newName, updatedAt: new Date().toISOString() } : p
-    );
-    setPlans(updated);
-    localStorage.setItem("nscs_plans", JSON.stringify(updated));
-    if (currentPlanId === planId) setPlanName(newName);
-    flash("Renamed");
+  const deletePlan = async (planId) => {
+    try {
+      await getStorage().deletePlan(planId);
+      const updated = plans.filter((p) => p.id !== planId);
+      setPlans(updated);
+      if (currentPlanId === planId) {
+        if (updated.length > 0) loadPlan(updated[0]); else setCurrentPlanId(null);
+      }
+      flash("Plan deleted");
+    } catch (e) {
+      console.error(e);
+      flash("Failed to delete plan");
+    }
+  };
+  const renamePlan = async (planId, newName) => {
+    const target = plans.find((p) => p.id === planId);
+    if (!target) return;
+    const renamed = { ...target, name: newName, updatedAt: new Date().toISOString() };
+    try {
+      await getStorage().upsertPlan(renamed);
+      const updated = plans.map((p) => (p.id === planId ? renamed : p));
+      setPlans(updated);
+      if (currentPlanId === planId) setPlanName(newName);
+      flash("Renamed");
+    } catch (e) {
+      console.error(e);
+      flash("Failed to rename plan");
+    }
   };
 
   // custom rooms
@@ -1129,6 +1162,15 @@ export default function App() {
   );
 
   // -------------------- RENDER --------------------
+  if (plansLoading) {
+    return (
+      <div className="min-h-screen bg-white ns-app flex items-center justify-center">
+        <style>{BRAND_CSS}</style>
+        <div className="text-gray-500 text-sm">Loading schedules…</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white ns-app">
       {/* Navy header */}
