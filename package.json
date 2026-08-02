@@ -1,0 +1,19 @@
+{
+  "name": "nscs-schedule-planner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "North Star Classical Christian School — AYE 2027 schedule planning tool. Single-file standalone React app with localStorage persistence.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node test/smoke.test.cjs",
+    "test:e2e": "node test/e2e.test.cjs",
+    "test:all": "node test/smoke.test.cjs && node test/e2e.test.cjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "jsdom": "^25.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}

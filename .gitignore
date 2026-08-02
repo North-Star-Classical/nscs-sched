@@ -1,0 +1,11 @@
+node_modules/
+npm-debug.log*
+.DS_Store
+*.local
+.vscode/
+.idea/
+
+# dist/ is committed on purpose so the built HTML can be downloaded straight
+# from GitHub without a build step. If you'd rather not track build output,
+# uncomment the next line:
+# dist/
