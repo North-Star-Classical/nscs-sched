@@ -1,31 +1,55 @@
-// Build: src/App.jsx -> dist/nscs-schedule-planner.html (single standalone file)
+// Build: src/*.js(x) -> dist/index.html (standalone file for Cloudflare Pages)
 //
 // Pipeline:
-//   1. Strip the React import (UMD React is provided globally by the HTML shell)
-//   2. Strip any other import lines; convert `export default function App` to plain function
-//   3. HARD FAIL if any import/export survives (this exact silent failure once shipped
-//      a require("react") call to the browser and crashed the app on load)
-//   4. Compile JSX with esbuild (iife, whitespace-minified)
-//   5. HARD FAIL if the bundle contains require(
-//   6. Wrap in the HTML shell with CDN scripts (React 18 UMD, Tailwind 2, html2pdf)
+//   1. Concatenate bootstrap.js, storage.js, auth.js, then App.jsx (React import stripped)
+//   2. HARD FAIL if any import/export survives (except transformed React import)
+//   3. Compile JSX with esbuild (iife)
+//   4. HARD FAIL if require( appears in bundle
+//   5. Wrap in HTML shell (React UMD, Supabase UMD, Tailwind, html2pdf)
 //
-// Usage: npm run build
+// Env (production): SUPABASE_URL, SUPABASE_ANON_KEY
+// Env (tests):       NSCS_TEST_MODE=1
 
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { buildSync } from "esbuild";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const srcPath = join(root, "src", "App.jsx");
+const srcDir = join(root, "src");
 const distDir = join(root, "dist");
-const outPath = join(distDir, "nscs-schedule-planner.html");
+const outHtml = join(distDir, "index.html");
+const legacyHtml = join(distDir, "nscs-schedule-planner.html");
 
-let src = readFileSync(srcPath, "utf8");
+const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+const appVersion = pkg.version || "1.0.0";
 
-// 1. React import -> UMD global destructure
+const testMode = process.env.NSCS_TEST_MODE === "1" || process.env.NSCS_TEST_MODE === "true";
+const supabaseUrl = process.env.SUPABASE_URL || "";
+const supabaseKey = process.env.SUPABASE_ANON_KEY || "";
+
+if (!testMode && (!supabaseUrl || !supabaseKey)) {
+  console.warn("⚠ SUPABASE_URL / SUPABASE_ANON_KEY not set — building in test mode (in-memory storage, no login).");
+}
+
+function readSrc(name) {
+  return readFileSync(join(srcDir, name), "utf8");
+}
+
+let bootstrap = readSrc("bootstrap.js")
+  .replace("__SUPABASE_URL__", supabaseUrl.replace(/\\/g, "\\\\").replace(/"/g, '\\"'))
+  .replace("__SUPABASE_ANON_KEY__", supabaseKey.replace(/\\/g, "\\\\").replace(/"/g, '\\"'))
+  .replace("__NSCS_TEST_MODE__", testMode || !supabaseUrl || !supabaseKey ? "true" : "false")
+  .replace("__APP_VERSION__", appVersion);
+
+let storage = readSrc("storage.js");
+let auth = readSrc("auth.js");
+
+let app = readSrc("App.jsx");
+
+// React import -> UMD global destructure
 let reactImports = 0;
-src = src.replace(
+app = app.replace(
   /import\s+React\s*,?\s*(\{[^}]*\})?\s*from\s*["']react["'];?/,
   (_, named) => {
     reactImports++;
@@ -33,26 +57,25 @@ src = src.replace(
   }
 );
 if (reactImports !== 1) {
-  throw new Error(`Expected exactly 1 React import, transformed ${reactImports}. Check src/App.jsx.`);
+  throw new Error(`Expected exactly 1 React import in App.jsx, transformed ${reactImports}.`);
 }
 
-// 2. Strip other imports; unwrap export default
-src = src.replace(/^import .*$/gm, "");
-const exportCount = (src.match(/export\s+default\s+function\s+App\(\)/g) || []).length;
+app = app.replace(/^import .*$/gm, "");
+const exportCount = (app.match(/export\s+default\s+function\s+App\(\)/g) || []).length;
 if (exportCount !== 1) {
   throw new Error(`Expected exactly 1 'export default function App()', found ${exportCount}.`);
 }
-src = src.replace(/export\s+default\s+function\s+App\(\)/, "function App()");
+app = app.replace(/export\s+default\s+function\s+App\(\)/, "function App()");
 
-// 3. Hard fail on survivors
+let src = [bootstrap, storage, auth, app].join("\n\n");
+
 const leftovers = src.match(/^\s*(import|export)\b.*$/gm);
 if (leftovers) {
   throw new Error(`Import/export statements survived stripping:\n${leftovers.join("\n")}`);
 }
 
-src += '\n\nReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));\n';
+src += '\n\nReactDOM.createRoot(document.getElementById("root")).render(React.createElement(Root));\n';
 
-// 4. Compile
 const result = buildSync({
   stdin: { contents: src, loader: "jsx", resolveDir: root },
   bundle: false,
@@ -64,36 +87,48 @@ const result = buildSync({
 });
 let js = result.outputFiles[0].text;
 
-// 5. Hard fail on require()
 if (js.includes("require(")) {
   throw new Error("Compiled bundle contains require() — would crash in the browser.");
 }
 
-// 6. Wrap in HTML shell
 js = js.replace(/<\/script>/g, "<\\/script>");
+
 const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="app-version" content="${appVersion}">
 <title>North Star Schedule Planner — AYE 2027</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>body{margin:0}</style>
 </head>
 <body>
 <div id="root"></div>
-<script>
+<script defer>
 ${js}
 </script>
 </body>
 </html>`;
 
 mkdirSync(distDir, { recursive: true });
-writeFileSync(outPath, html);
-console.log(`✓ Built ${outPath} (${Math.round(html.length / 1024)} KB)`);
+writeFileSync(outHtml, html);
+writeFileSync(legacyHtml, html);
+
+// Static assets for Cloudflare Pages
+const staticDir = join(root, "public");
+if (existsSync(staticDir)) {
+  for (const name of ["robots.txt", "_headers"]) {
+    const src = join(staticDir, name);
+    if (existsSync(src)) copyFileSync(src, join(distDir, name));
+  }
+}
+
+console.log(`✓ Built ${outHtml} (${Math.round(html.length / 1024)} KB) v${appVersion}${testMode || !supabaseUrl ? " [test mode]" : ""}`);
