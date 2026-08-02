@@ -2,6 +2,10 @@
   "name": "nscs-schedule-planner",
   "version": "1.0.0",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Noth-Star-Classical/nscs-sched.git"
+  },
   "description": "North Star Classical Christian School — AYE 2027 schedule planning tool. Single-file standalone React app with localStorage persistence.",
   "type": "module",
   "scripts": {
