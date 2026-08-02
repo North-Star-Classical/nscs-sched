@@ -2,37 +2,38 @@
 
 function AuthGate(props) {
   var children = props.children;
-  var _s = useState(null);
+  var _s = React.useState(null);
   var session = _s[0];
   var setSession = _s[1];
-  var _l = useState(true);
+  var _l = React.useState(true);
   var loading = _l[0];
   var setLoading = _l[1];
-  var _e = useState("");
+  var _e = React.useState("");
   var email = _e[0];
   var setEmail = _e[1];
-  var _p = useState("");
+  var _p = React.useState("");
   var password = _p[0];
   var setPassword = _p[1];
-  var _err = useState(null);
+  var _err = React.useState(null);
   var authError = _err[0];
   var setAuthError = _err[1];
-  var _busy = useState(false);
+  var _busy = React.useState(false);
   var busy = _busy[0];
   var setBusy = _busy[1];
 
   React.useEffect(function () {
-    if (NSCS_TEST_MODE || !sb) {
+    var client = ensureSupabaseClient();
+    if (NSCS_TEST_MODE || !client) {
       setSession({ user: { email: "test@local" } });
       setLoading(false);
       return;
     }
-    sb.auth.getSession().then(function (_ref) {
+    client.auth.getSession().then(function (_ref) {
       var data = _ref.data;
       setSession(data.session);
       setLoading(false);
     });
-    var sub = sb.auth.onAuthStateChange(function (_event, sess) {
+    var sub = client.auth.onAuthStateChange(function (_event, sess) {
       setSession(sess);
     });
     return function () {
@@ -42,10 +43,11 @@ function AuthGate(props) {
 
   var handleLogin = function (ev) {
     ev.preventDefault();
-    if (!sb) return;
+    var client = ensureSupabaseClient();
+    if (!client) return;
     setBusy(true);
     setAuthError(null);
-    sb.auth.signInWithPassword({ email: email.trim(), password: password })
+    client.auth.signInWithPassword({ email: email.trim(), password: password })
       .then(function (res) {
         if (res.error) setAuthError(res.error.message);
         setBusy(false);
@@ -57,7 +59,8 @@ function AuthGate(props) {
   };
 
   var handleSignOut = function () {
-    if (sb) sb.auth.signOut();
+    var client = ensureSupabaseClient();
+    if (client) client.auth.signOut();
   };
 
   if (loading) {
@@ -67,7 +70,7 @@ function AuthGate(props) {
     }, React.createElement("div", { style: { color: "#57667e", fontSize: 14 } }, "Loading…"));
   }
 
-  if (!session && !NSCS_TEST_MODE && sb) {
+  if (!session && !NSCS_TEST_MODE && ensureSupabaseClient()) {
     return React.createElement("div", {
       className: "ns-app",
       style: { minHeight: "100vh", background: "linear-gradient(135deg,#0a2440 0%,#0a3a74 55%,#0a53b0 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 },

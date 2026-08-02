@@ -47,18 +47,20 @@ let auth = readSrc("auth.js");
 
 let app = readSrc("App.jsx");
 
-// React import -> UMD global destructure
+// React import -> strip; hooks use React.useState / React.useMemo (UMD global)
 let reactImports = 0;
 app = app.replace(
   /import\s+React\s*,?\s*(\{[^}]*\})?\s*from\s*["']react["'];?/,
-  (_, named) => {
+  () => {
     reactImports++;
-    return named ? `const ${named} = React;` : "";
+    return "";
   }
 );
 if (reactImports !== 1) {
   throw new Error(`Expected exactly 1 React import in App.jsx, transformed ${reactImports}.`);
 }
+app = app.replace(/\buseState\b/g, "React.useState");
+app = app.replace(/\buseMemo\b/g, "React.useMemo");
 
 app = app.replace(/^import .*$/gm, "");
 const exportCount = (app.match(/export\s+default\s+function\s+App\(\)/g) || []).length;
@@ -74,7 +76,19 @@ if (leftovers) {
   throw new Error(`Import/export statements survived stripping:\n${leftovers.join("\n")}`);
 }
 
-src += '\n\nReactDOM.createRoot(document.getElementById("root")).render(React.createElement(Root));\n';
+src += `\n\nfunction __nscsBoot() {
+  if (typeof React === "undefined" || typeof ReactDOM === "undefined") {
+    console.error("NSCS: React failed to load — check CDN scripts in index.html");
+    return;
+  }
+  ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(Root));
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", __nscsBoot);
+} else {
+  __nscsBoot();
+}
+`;
 
 const result = buildSync({
   stdin: { contents: src, loader: "jsx", resolveDir: root },

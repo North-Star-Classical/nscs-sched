@@ -134,10 +134,10 @@ function getStorage() {
     return globalThis.__NSCS_TEST_STORAGE__;
   }
   if (_storage) return _storage;
-  if (NSCS_TEST_MODE || !sb) {
+  if (NSCS_TEST_MODE || !ensureSupabaseClient()) {
     _storage = createMemoryStorage();
   } else {
-    _storage = createSupabaseStorage(sb);
+    _storage = createSupabaseStorage(ensureSupabaseClient());
   }
   return _storage;
 }

@@ -6,8 +6,14 @@ var NSCS_TEST_MODE = __NSCS_TEST_MODE__;
 var APP_VERSION = "__APP_VERSION__";
 
 var sb = null;
-if (!NSCS_TEST_MODE && SUPABASE_URL && SUPABASE_ANON_KEY && typeof supabase !== "undefined") {
-  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function ensureSupabaseClient() {
+  if (NSCS_TEST_MODE) return null;
+  if (sb) return sb;
+  if (typeof supabase !== "undefined" && SUPABASE_URL && SUPABASE_ANON_KEY) {
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+  return sb;
 }
 
 var BLOCK_ROW_KEYS = {
