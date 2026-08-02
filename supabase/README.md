@@ -6,7 +6,10 @@ Create a project at [supabase.com](https://supabase.com) (region: `us-east-1` re
 
 ## 2. Run migration
 
-Open **SQL Editor** and run [`migrations/001_plans.sql`](migrations/001_plans.sql).
+Open **SQL Editor** and run migrations in order:
+
+1. [`migrations/001_plans.sql`](migrations/001_plans.sql) — plans + autosaves
+2. [`migrations/002_blocks_teachers_tables.sql`](migrations/002_blocks_teachers_tables.sql) — `plan_blocks` + `plan_teachers` (migrates existing JSON data)
 
 ## 3. Auth (invite-only)
 
