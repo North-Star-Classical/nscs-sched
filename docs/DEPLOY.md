@@ -1,56 +1,103 @@
-# Deploy to Cloudflare Pages
+# Deploy — Netlify (now) → Cloudflare (later)
 
-Target URL: **https://schedule.nsclassical.com**
+**Now:** Netlify (`*.netlify.app`)  
+**Later:** `https://schedule.nsclassical.com` on Cloudflare Pages (DNS stays in Cloudflare)
 
-## 1. Connect GitHub
+---
 
-1. Cloudflare Dashboard → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
-2. Select org **North-Star-Classical** → repo **nscs-sched**
+## Netlify setup (temporary)
+
+### 1. Connect GitHub
+
+1. [Netlify](https://app.netlify.com/) → **Add new site** → **Import an existing project**
+2. **GitHub** → org **North-Star-Classical** → repo **nscs-sched**
+3. Branch: **`main`**
+
+Netlify reads `netlify.toml` automatically:
 
 | Setting | Value |
 |---------|-------|
-| Production branch | `main` |
-| Build command | `npm install && npm run build` |
-| Build output directory | `dist` |
-| Node.js version | 20 |
+| Build command | `npm run build` |
+| Publish directory | `dist` |
+| Node.js | 20 |
 
-## 2. Environment variables
+### 2. Environment variables
 
-Pages → **Settings** → **Environment variables** (Production):
+**Site configuration** → **Environment variables** → **Add a variable** (Production):
 
 | Variable | Value |
 |----------|-------|
-| `SUPABASE_URL` | Your Supabase project URL |
+| `SUPABASE_URL` | `https://bnrlcpemxjkisnejqcbq.supabase.co` |
 | `SUPABASE_ANON_KEY` | Supabase anon public key |
 
-Do **not** set `NSCS_TEST_MODE` in production.
+Do **not** set `NSCS_TEST_MODE`.
 
-## 3. Custom domain
+Trigger **Deploy site** after saving variables.
 
-Pages → **Custom domains** → **Set up a custom domain** → `schedule.nsclassical.com`
+### 3. Supabase Auth URLs
 
-If DNS is in the same Cloudflare account, the CNAME is added automatically.
+**Authentication** → **URL configuration** → add your Netlify URL:
 
-Manual DNS (if needed):
+- **Site URL:** `https://YOUR-SITE.netlify.app`
+- **Redirect URLs:** `https://YOUR-SITE.netlify.app/**`
 
-| Type | Name | Target |
-|------|------|--------|
-| CNAME | `schedule` | `<project>.pages.dev` |
+(Replace with your actual Netlify subdomain after first deploy.)
 
-## 4. Verify
+### 4. Verify
 
-- [ ] Login screen appears at `https://schedule.nsclassical.com`
+- [ ] Login screen on `https://YOUR-SITE.netlify.app`
 - [ ] Invited user can sign in
 - [ ] Save plan persists across browsers
 - [ ] PDF download works
+- [ ] `<meta name="app-version">` shows current version
 
-## 5. Seed production data
-
-After migration SQL is applied:
+### 5. CLI deploy (optional)
 
 ```bash
-node scripts/extract-seed.mjs   # refresh seed JSON from App.jsx
-SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npm run seed
+netlify login
+netlify init          # link this repo to a Netlify site
+npm run build         # with .env or exported SUPABASE_* vars
+netlify deploy --prod --dir=dist
 ```
 
-Then invite users in Supabase Dashboard → Authentication → Users.
+---
+
+## Cloudflare Pages (later — custom domain)
+
+When ready to move `schedule.nsclassical.com`:
+
+1. Deploy to Cloudflare (see below)
+2. In **Cloudflare DNS** for `nsclassical.com`:
+   - Change `schedule` CNAME from Netlify target → `nscs-sched.pages.dev`
+3. Remove or pause the Netlify site (optional)
+4. Update Supabase **Site URL** / **Redirect URLs** to `https://schedule.nsclassical.com`
+
+---
+
+## Cloudflare Pages (later)
+
+GitHub Actions deploy is prepared but **disabled** in CI until Cloudflare secrets are added.
+
+### Enable when ready
+
+1. Add GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+2. Uncomment the `deploy` job in `.github/workflows/ci.yml`
+3. Merge / push to `main`
+
+### Cloudflare API token
+
+Dashboard → **My Profile** → **API Tokens** → **Edit Cloudflare Workers** template
+
+### Custom domain on Cloudflare
+
+**Workers & Pages** → **nscs-sched** → **Custom domains** → `schedule.nsclassical.com`
+
+| Type | Name | Target |
+|------|------|--------|
+| CNAME | `schedule` | `nscs-sched.pages.dev` |
+
+---
+
+## Supabase
+
+Database migrations and seed are already applied. See [supabase/README.md](../supabase/README.md).
