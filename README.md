@@ -40,8 +40,9 @@ docs/DEPLOY.md         Cloudflare Pages + custom domain setup
 - **UI:** React 18 (single component), Tailwind 2, html2pdf
 - **Auth:** Supabase Auth — email/password, invite-only (disable public sign-up)
 - **Data:** `plans` + `plan_autosaves` tables with RLS (authenticated read/write)
-- **Deploy:** Cloudflare Pages from `main`, env vars `SUPABASE_URL` + `SUPABASE_ANON_KEY`
-- **Version:** `meta name="app-version"` in HTML + `package.json` (currently 1.1.0)
+- **Deploy:** Cloudflare Pages via GitHub Actions on push to `main` (Wrangler); see [docs/DEPLOY.md](docs/DEPLOY.md)
+- **Data:** `plans`, `plan_blocks`, `plan_teachers`, `plan_autosaves` (Supabase Postgres + RLS)
+- **Version:** `meta name="app-version"` in HTML + `package.json` (currently 1.2.1)
 
 ## Deploy
 
