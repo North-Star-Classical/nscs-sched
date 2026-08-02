@@ -1,5 +1,7 @@
 /* Plan persistence — Supabase or in-memory (tests). Uses global sb, NSCS_TEST_MODE. */
 
+var PLAN_SELECT = "*, plan_blocks(*), plan_teachers(*)";
+
 function createMemoryStorage() {
   if (typeof globalThis !== "undefined" && globalThis.__NSCS_MEM_STORE__) {
     return globalThis.__NSCS_MEM_STORE__;
@@ -41,11 +43,31 @@ function createMemoryStorage() {
   return adapter;
 }
 
+async function savePlanChildren(client, plan) {
+  var planId = plan.id;
+  var blockRows = (plan.blocks || []).map(function (b, i) { return blockToRow(planId, b, i); });
+  var teacherRows = (plan.teachers || []).map(function (t, i) { return teacherToRow(planId, t, i); });
+
+  var delBlocks = await client.from("plan_blocks").delete().eq("plan_id", planId);
+  if (delBlocks.error) throw delBlocks.error;
+  var delTeachers = await client.from("plan_teachers").delete().eq("plan_id", planId);
+  if (delTeachers.error) throw delTeachers.error;
+
+  if (blockRows.length) {
+    var insBlocks = await client.from("plan_blocks").insert(blockRows);
+    if (insBlocks.error) throw insBlocks.error;
+  }
+  if (teacherRows.length) {
+    var insTeachers = await client.from("plan_teachers").insert(teacherRows);
+    if (insTeachers.error) throw insTeachers.error;
+  }
+}
+
 function createSupabaseStorage(client) {
   return {
     kind: "supabase",
     async loadPlans() {
-      var res = await client.from("plans").select("*").order("updated_at", { ascending: false });
+      var res = await client.from("plans").select(PLAN_SELECT).order("updated_at", { ascending: false });
       if (res.error) throw res.error;
       return (res.data || []).map(planFromRow);
     },
@@ -59,9 +81,12 @@ function createSupabaseStorage(client) {
       };
       var sess = await client.auth.getSession();
       if (sess.data.session) row.updated_by = sess.data.session.user.id;
-      var res = await client.from("plans").upsert(row, { onConflict: "id" }).select().single();
+      var res = await client.from("plans").upsert(row, { onConflict: "id" }).select(PLAN_SELECT).single();
       if (res.error) throw res.error;
-      return planFromRow(res.data);
+      await savePlanChildren(client, plan);
+      var reload = await client.from("plans").select(PLAN_SELECT).eq("id", plan.id).single();
+      if (reload.error) throw reload.error;
+      return planFromRow(reload.data);
     },
     async deletePlan(id) {
       var res = await client.from("plans").delete().eq("id", id);
