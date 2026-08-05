@@ -10,6 +10,7 @@ Open **SQL Editor** and run migrations in order:
 
 1. [`migrations/001_plans.sql`](migrations/001_plans.sql) — plans + autosaves
 2. [`migrations/002_blocks_teachers_tables.sql`](migrations/002_blocks_teachers_tables.sql) — `plan_blocks` + `plan_teachers` (migrates existing JSON data)
+3. [`migrations/003_plan_backups.sql`](migrations/003_plan_backups.sql) — `plan_backups` for on-demand JSON snapshots (Plans tab)
 
 ## 3. Auth (invite-only)
 
