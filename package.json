@@ -1,6 +1,6 @@
 {
   "name": "nscs-schedule-planner",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "private": true,
   "repository": {
     "type": "git",
@@ -17,6 +17,7 @@
     "extract-seed": "node scripts/extract-seed.mjs",
     "seed": "node scripts/seed.mjs",
     "export:supabase": "node scripts/export-supabase.mjs",
+    "restore:supabase": "node scripts/restore-supabase.mjs",
     "setup:supabase": "node scripts/setup-supabase.mjs",
     "deploy": "npm run build && wrangler pages deploy dist --project-name=nscs-sched"
   },
