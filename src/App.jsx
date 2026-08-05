@@ -394,6 +394,10 @@ export default function App() {
   const [showDismissed, setShowDismissed] = useState(false);
   const [plansLoading, setPlansLoading] = useState(true);
   const [autosaveLabel, setAutosaveLabel] = useState(null);
+  const [backups, setBackups] = useState([]);
+  const [backupLabel, setBackupLabel] = useState("");
+  const [backupsLoading, setBackupsLoading] = useState(false);
+  const [backupBusy, setBackupBusy] = useState(false);
   const [undoNavModal, setUndoNavModal] = useState(null);
   const [historyRev, setHistoryRev] = useState(0);
   const historyRef = React.useRef(createHistoryStack(10));
@@ -1149,6 +1153,123 @@ export default function App() {
       flash("Failed to rename plan");
     }
   };
+
+  const loadBackupsList = async () => {
+    const store = getStorage();
+    if (!store.listBackups) {
+      setBackups([]);
+      return;
+    }
+    setBackupsLoading(true);
+    try {
+      const list = await store.listBackups();
+      setBackups(list);
+    } catch (e) {
+      console.error(e);
+      flash("Could not load backups — run migration 003 in Supabase if this is a new install");
+    } finally {
+      setBackupsLoading(false);
+    }
+  };
+
+  const createBackup = async () => {
+    const store = getStorage();
+    if (!store.createBackup) {
+      flash("Backups require cloud storage");
+      return;
+    }
+    setBackupBusy(true);
+    try {
+      await runAutosave();
+      const label = backupLabel.trim() || `Backup ${new Date().toLocaleString()}`;
+      await store.createBackup(label);
+      setBackupLabel("");
+      await loadBackupsList();
+      flash(`Created backup "${label}"`);
+    } catch (e) {
+      console.error(e);
+      flash("Failed to create backup");
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const restoreFromBackup = async (backup) => {
+    const msg = [
+      `Restore backup "${backup.label}"?`,
+      "",
+      `${backup.planCount} plan(s), ${backup.blockCount} block(s), ${backup.teacherCount} teacher(s)`,
+      `Saved ${new Date(backup.exportedAt).toLocaleString()}`,
+      "",
+      "Matching schedules in this backup will overwrite current data. Continue?",
+    ].join("\n");
+    if (!confirm(msg)) return;
+    setBackupBusy(true);
+    try {
+      await getStorage().restoreBackup(backup.id);
+      const loaded = await getStorage().loadPlans();
+      setPlans(loaded);
+      if (loaded.length > 0) {
+        const best = pickBestPlan(loaded);
+        let restoredAuto = false;
+        try {
+          const auto = await getStorage().loadAutosave(best.id);
+          if (auto && auto.blocks) {
+            const lastSavedAt = best.updatedAt || "";
+            const planBlockCount = (best.blocks || []).length;
+            const autoBlockCount = (auto.blocks || []).length;
+            if ((!lastSavedAt || (auto.updatedAt || "") > lastSavedAt) && !(planBlockCount && !autoBlockCount)) {
+              loadPlan(auto, { silent: true });
+              restoredAuto = true;
+            }
+          }
+        } catch (e) { /* ignore corrupt autosave */ }
+        if (!restoredAuto) loadPlan(best, { silent: true });
+      }
+      flash(`Restored backup "${backup.label}"`);
+    } catch (e) {
+      console.error(e);
+      flash("Failed to restore backup");
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const downloadBackupJson = async (backup) => {
+    try {
+      const data = await getStorage().getBackup(backup.id);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `nscs-backup-${backup.label.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      flash("Could not download backup");
+    }
+  };
+
+  const deleteBackup = async (backup) => {
+    if (!confirm(`Delete backup "${backup.label}"? This cannot be undone.`)) return;
+    setBackupBusy(true);
+    try {
+      await getStorage().deleteBackup(backup.id);
+      await loadBackupsList();
+      flash("Backup deleted");
+    } catch (e) {
+      console.error(e);
+      flash("Failed to delete backup");
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (tab !== "plans" || plansLoading) return;
+    loadBackupsList();
+  }, [tab, plansLoading]);
 
   // custom rooms
   const allRooms = [...ROOMS, ...customRooms].sort();
@@ -2204,8 +2325,76 @@ export default function App() {
               )}
             </div>
 
+            {/* Backups */}
+            <div className="border border-gray-200 rounded p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <h3 className="text-xs font-semibold text-gray-700 flex-1">JSON Backups</h3>
+                {backupBusy && <span className="text-xs text-gray-500">Working…</span>}
+              </div>
+              <div className="flex gap-2">
+                <input value={backupLabel} onChange={(e) => setBackupLabel(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && !backupBusy && createBackup()}
+                  placeholder="Optional label (e.g., Before AYE 2027 changes)"
+                  className="flex-1 border border-gray-300 rounded px-2 py-1.5 text-xs bg-white" />
+                <button onClick={createBackup} disabled={backupBusy}
+                  className="ns-act text-xs disabled:opacity-50">
+                  + Create backup
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                Snapshots all schedules, blocks, teachers, and auto-saves to the cloud. Auto-save runs first so recent edits are included.
+              </p>
+              {backupsLoading ? (
+                <div className="text-xs text-gray-500 italic">Loading backups…</div>
+              ) : backups.length === 0 ? (
+                <div className="text-xs text-gray-500 italic p-3 bg-gray-50 rounded">No backups yet. Create one before major changes.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-left text-gray-600">
+                        <th className="py-2 pr-3 font-semibold">Label</th>
+                        <th className="py-2 pr-3 font-semibold">Created</th>
+                        <th className="py-2 pr-3 font-semibold">Contents</th>
+                        <th className="py-2 font-semibold text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {backups.map((b) => (
+                        <tr key={b.id} className="border-b border-gray-100">
+                          <td className="py-2 pr-3 font-medium text-gray-900">{b.label}</td>
+                          <td className="py-2 pr-3 text-gray-600 whitespace-nowrap">
+                            {b.exportedAt ? `${new Date(b.exportedAt).toLocaleDateString()} ${new Date(b.exportedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "—"}
+                          </td>
+                          <td className="py-2 pr-3 text-gray-600">
+                            {b.planCount} plan{b.planCount === 1 ? "" : "s"} · {b.blockCount} block{b.blockCount === 1 ? "" : "s"} · {b.teacherCount} teacher{b.teacherCount === 1 ? "" : "s"}
+                          </td>
+                          <td className="py-2 text-right whitespace-nowrap">
+                            <div className="flex gap-1.5 justify-end">
+                              <button onClick={() => restoreFromBackup(b)} disabled={backupBusy}
+                                className="text-xs px-2 py-1 rounded border border-green-300 text-green-800 hover:bg-green-50 disabled:opacity-50">
+                                Restore
+                              </button>
+                              <button onClick={() => downloadBackupJson(b)} disabled={backupBusy}
+                                className="text-xs px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+                                Download
+                              </button>
+                              <button onClick={() => deleteBackup(b)} disabled={backupBusy}
+                                className="text-xs px-2 py-1 rounded border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50">
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
             <div className="bg-gray-50 border border-gray-200 rounded p-3 text-xs text-gray-600">
-              <strong>How it works:</strong> Each plan is a complete snapshot of the schedule — all blocks, teachers, custom rooms, and plan entries. "Save" writes the current plan to the browser's local storage. Switch plans with "Load," or create a new one from scratch. Deleting a plan removes it permanently. Custom rooms are per-plan, so different schedules can use different room lists.
+              <strong>How it works:</strong> Each plan is a complete snapshot of the schedule — all blocks, teachers, custom rooms, and plan entries. <strong>Save</strong> writes the current plan to the cloud. <strong>Auto-save</strong> protects unsaved edits separately. Use <strong>Create backup</strong> before major changes; <strong>Restore</strong> rolls matching schedules back to that snapshot.
             </div>
           </div>
         )}
