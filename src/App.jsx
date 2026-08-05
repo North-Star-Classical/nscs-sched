@@ -137,6 +137,30 @@ const mk = (band, course, subject, days, s, e, teacher, room, extra = {}) => ({
   id: `b${_id++}`, band, course, subject, days, start: t(s), end: t(e), teacher, room, ...extra,
 });
 
+function nextBlockId() {
+  return `b${Date.now()}${Math.floor(Math.random() * 1000)}`;
+}
+
+function blankBlock(band, day) {
+  return {
+    id: nextBlockId(),
+    band,
+    course: "",
+    subject: "",
+    days: [day],
+    start: t("9:00"),
+    end: t("9:45"),
+    teacher: null,
+    teacher2: null,
+    room: "",
+    grades: (BAND_GRADES[band] || []).slice(),
+  };
+}
+
+function isFacilityPdfRow(b) {
+  return b && (b.facility || b.course === "Setup" || b.course === "Teardown");
+}
+
 const SEED_BLOCKS = [
   // ---- Anchors ----
   mk("K–6th", "LS Formation", "Formation", ["T"], "10:00", "10:30", "adjei", "COVE", { anchor: true }),
@@ -344,6 +368,85 @@ export default function App() {
   const [deletedGaps, setDeletedGaps] = useState([]); // gapKeyFor() strings removed by the user
   const [showDismissed, setShowDismissed] = useState(false);
   const [plansLoading, setPlansLoading] = useState(true);
+  const [autosaveLabel, setAutosaveLabel] = useState(null);
+  const [undoNavModal, setUndoNavModal] = useState(null);
+  const [historyRev, setHistoryRev] = useState(0);
+  const historyRef = React.useRef(createHistoryStack(10));
+  const blockEditSnapRef = React.useRef(null);
+  const planEnsuringRef = React.useRef(null);
+  const scheduleApiRef = React.useRef({});
+
+  const scheduleSnap = () => ({
+    blocks, teachers, customRooms, extraGaps, deletedGaps, gapOv, params, dismissed,
+  });
+
+  const applyScheduleSnap = (snap) => {
+    setBlocks(snap.blocks || []);
+    setTeachers(snap.teachers || []);
+    setCustomRooms(snap.customRooms || []);
+    setExtraGaps(snap.extraGaps || {});
+    setDeletedGaps(snap.deletedGaps || []);
+    setGapOv(snap.gapOv || {});
+    setParams({ ...DEFAULT_PARAMS, ...(snap.params || {}) });
+    setDismissed(snap.dismissed || []);
+  };
+
+  const bumpHistory = () => setHistoryRev((v) => v + 1);
+
+  const pushHistory = (label, actionTab) => {
+    historyRef.current.push(scheduleSnap(), label, actionTab || tab);
+    bumpHistory();
+  };
+
+  const ensurePlanExists = async () => {
+    if (currentPlanId || !bootedRef.current) return currentPlanId;
+    if (planEnsuringRef.current) return planEnsuringRef.current;
+    const promise = (async () => {
+      const id = `plan-${Date.now()}`;
+      const name = planName || "Untitled Plan";
+      const snapshot = {
+        id, name, blocks, teachers, customRooms, extraGaps, deletedGaps, gapOv, params, dismissed,
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      };
+      try {
+        await getStorage().upsertPlan(snapshot);
+        setPlans((ps) => (ps.some((p) => p.id === id) ? ps : [...ps, snapshot]));
+        setCurrentPlanId(id);
+        flash(`Created plan "${name}" — edits will auto-save`);
+        return id;
+      } catch (e) {
+        console.error(e);
+        flash("Could not create plan — check your connection");
+        return null;
+      } finally {
+        planEnsuringRef.current = null;
+      }
+    })();
+    planEnsuringRef.current = promise;
+    return promise;
+  };
+
+  const runAutosave = React.useCallback(async () => {
+    if (!bootedRef.current) return;
+    const planId = currentPlanId || await ensurePlanExists();
+    if (!planId) return;
+    const snap = {
+      id: planId, name: planName, blocks, teachers, customRooms, extraGaps, deletedGaps, gapOv, params, dismissed,
+      updatedAt: new Date().toISOString(),
+    };
+    try {
+      await getStorage().saveAutosave(planId, snap);
+      const at = new Date();
+      setAutosaveLabel(`Auto-saved ${at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`);
+    } catch (e) {
+      console.error("Autosave failed:", e);
+      setAutosaveLabel("Auto-save failed");
+    }
+  }, [blocks, teachers, customRooms, extraGaps, deletedGaps, gapOv, params, dismissed, planName, currentPlanId]);
+
+  scheduleApiRef.current.pushHistory = pushHistory;
+  scheduleApiRef.current.ensurePlan = ensurePlanExists;
+  scheduleApiRef.current.runAutosave = runAutosave;
 
   // Load plans from storage on mount
   React.useEffect(() => {
@@ -385,28 +488,38 @@ export default function App() {
     return function () { cancelled = true; };
   }, []);
 
-  // Auto-save working state (debounced 1s)
+  // Auto-save working state (debounced 1s + interval every 3 min) → plan_autosaves slot only
   React.useEffect(() => {
-    if (!bootedRef.current || !currentPlanId) return;
-    var timer = setTimeout(function () {
-      var snap = {
-        id: currentPlanId, name: planName, blocks: blocks, teachers: teachers, customRooms: customRooms,
-        extraGaps: extraGaps, deletedGaps: deletedGaps, gapOv: gapOv, params: params, dismissed: dismissed,
-        updatedAt: new Date().toISOString(),
-      };
-      getStorage().saveAutosave(currentPlanId, snap).catch(function (e) {
-        console.error("Autosave failed:", e);
-      });
-    }, 1000);
+    if (!bootedRef.current) return;
+    var timer = setTimeout(function () { runAutosave(); }, 1000);
     return function () { clearTimeout(timer); };
-  }, [blocks, teachers, customRooms, extraGaps, deletedGaps, gapOv, params, dismissed, planName, currentPlanId]);
+  }, [blocks, teachers, customRooms, extraGaps, deletedGaps, gapOv, params, dismissed, planName, currentPlanId, runAutosave]);
+
+  React.useEffect(() => {
+    if (!bootedRef.current) return;
+    var iv = setInterval(function () { runAutosave(); }, 3 * 60 * 1000);
+    return function () { clearInterval(iv); };
+  }, [runAutosave]);
+  const paramsEditSnapRef = React.useRef(null);
+  const commitParamsHistory = () => {
+    if (paramsEditSnapRef.current && JSON.stringify(paramsEditSnapRef.current.params) !== JSON.stringify(params)) {
+      historyRef.current.push(paramsEditSnapRef.current, "Change parameters", "params");
+      bumpHistory();
+      ensurePlanExists();
+    }
+    paramsEditSnapRef.current = null;
+  };
   const sigOf = (c) => `${c.type}|${(c.blocks || []).map((b) => b.id).sort().join(",")}|${c.bandRef || ""}`;
+  const undoEnabled = historyRev >= 0 && historyRef.current.canUndo();
+  const redoEnabled = historyRev >= 0 && historyRef.current.canRedo();
+  const TAB_LABELS = { schedule: "Schedule Grid", conflicts: "Conflicts & Resolutions", teachers: "Teachers & Load", reports: "Report Generator", plans: "Plans", params: "Parameters" };
 
   const tById = useMemo(() => Object.fromEntries(teachers.map((x) => [x.id, x])), [teachers]);
   const tName = (id) => (id ? tById[id]?.name || id : "—");
 
   const update = (id, patch) => setBlocks((bs) => bs.map((b) => (b.id === id ? { ...b, ...patch } : b)));
-  const remove = (id) => { setBlocks((bs) => bs.filter((b) => b.id !== id)); setEditId(null); };
+  const updateWithHistory = (id, patch, label) => { pushHistory(label || "Edit block", "schedule"); update(id, patch); ensurePlanExists(); };
+  const remove = (id) => { pushHistory("Delete block", "schedule"); setBlocks((bs) => bs.filter((b) => b.id !== id)); setEditId(null); ensurePlanExists(); };
   const flash = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2600); };
 
   // -------------------- CONFLICT ENGINE --------------------
@@ -520,7 +633,7 @@ export default function App() {
         blocks: [b],
         detail: `“${b.course}” is scheduled on ${bad.map((d) => DAY_NAMES[d]).join(", ")}.`,
         suggestion: "Restrict to Wednesday/Thursday.",
-        apply: () => { update(b.id, { days: b.days.filter((d) => ["W", "Th"].includes(d)).length ? b.days.filter((d) => ["W", "Th"].includes(d)) : ["W", "Th"] }); flash("Wellness restricted to W/Th"); },
+        apply: () => { pushHistory("Resolve conflict", "conflicts"); update(b.id, { days: b.days.filter((d) => ["W", "Th"].includes(d)).length ? b.days.filter((d) => ["W", "Th"].includes(d)) : ["W", "Th"] }); flash("Wellness restricted to W/Th"); ensurePlanExists(); },
       });
     }
 
@@ -536,7 +649,7 @@ export default function App() {
           blocks: [a, b],
           detail: `${shared.map(gradeName).join(", ")} students have both “${a.course}” and “${b.course}” at ${fmt(Math.max(a.start, b.start))}–${fmt(Math.min(a.end, b.end))} (${a.days.filter((d) => b.days.includes(d)).join(", ")}).`,
           suggestion: `If this is a designed split (different grades within the band), link the two blocks as a split pair; otherwise move one block to an open slot for the band.`,
-          apply: () => { const g = `split-${a.id}`; update(a.id, { splitGroup: g }); update(b.id, { splitGroup: g }); flash("Blocks linked as a split pair"); },
+          apply: () => { pushHistory("Resolve conflict", "conflicts"); const g = `split-${a.id}`; update(a.id, { splitGroup: g }); update(b.id, { splitGroup: g }); flash("Blocks linked as a split pair"); ensurePlanExists(); },
         });
       }
     }
@@ -584,7 +697,7 @@ export default function App() {
             blocks: [a, b],
             detail: `“${a.course}” (${fmt(a.start)}–${fmt(a.end)}) and “${b.course}” (${fmt(b.start)}–${fmt(b.end)}) are a designed concurrent pair but no longer share times.`,
             suggestion: `Align “${b.course}” to ${fmt(a.start)}–${fmt(a.end)}.`,
-            apply: () => { update(b.id, { start: a.start, end: a.end }); flash(`“${b.course}” re-aligned`); },
+            apply: () => { pushHistory("Resolve conflict", "conflicts"); update(b.id, { start: a.start, end: a.end }); flash(`“${b.course}” re-aligned`); ensurePlanExists(); },
           });
         }
       }
@@ -598,7 +711,7 @@ export default function App() {
       blocks: [m910, m1112],
       detail: `9th/10th math (${fmt(m910.start)}–${fmt(m910.end)}) and 11th/12th math (${fmt(m1112.start)}–${fmt(m1112.end)}) must be concurrent for cross-band placement.`,
       suggestion: `Align 11th/12th math to ${fmt(m910.start)}–${fmt(m910.end)}.`,
-      apply: () => { update(m1112.id, { start: m910.start, end: m910.end }); flash("US math windows aligned"); },
+      apply: () => { pushHistory("Resolve conflict", "conflicts"); update(m1112.id, { start: m910.start, end: m910.end }); flash("US math windows aligned"); ensurePlanExists(); },
     });
 
     // 10. Day-budget overage per band (PRD 3.4 §19 / 3.1 §2)
@@ -738,24 +851,89 @@ export default function App() {
 
   // plan/break entry mutators
   const addPlanEntry = (tid) => {
+    pushHistory("Add plan entry", "teachers");
     const id = `${Date.now()}${Math.floor(Math.random() * 100)}`;
     setExtraGaps((g) => ({ ...g, [tid]: [...(g[tid] || []), { id, label: "Plan", days: ["M", "T", "W", "Th"], start: t("13:00"), end: t("13:30") }] }));
+    ensurePlanExists();
     flash("Plan entry added");
   };
-  const setPlanEntry = (tid, id, patch) =>
+  const setPlanEntry = (tid, id, patch) => {
+    pushHistory("Edit plan entry", "teachers");
     setExtraGaps((g) => ({ ...g, [tid]: (g[tid] || []).map((p) => (p.id === id ? { ...p, ...patch } : p)) }));
+    ensurePlanExists();
+  };
   const delPlanEntry = (tid, id) => {
+    pushHistory("Remove plan entry", "teachers");
     setExtraGaps((g) => ({ ...g, [tid]: (g[tid] || []).filter((p) => p.id !== id) }));
+    ensurePlanExists();
     flash("Plan entry removed");
   };
   const delDerivedGap = (tid, d, gapKey) => {
+    pushHistory("Remove schedule gap", "teachers");
     setDeletedGaps((x) => [...x, gapKeyFor(tid, d, gapKey)]);
+    ensurePlanExists();
     flash("Removed from this teacher's schedule");
   };
   const restoreDerivedGaps = (tid) => {
+    pushHistory("Restore schedule gaps", "teachers");
     setDeletedGaps((x) => x.filter((k) => !k.startsWith(tid + "|")));
+    ensurePlanExists();
     flash("Restored removed entries");
   };
+  const facilityBufferMinsForTeacher = (tid) => {
+    let setupMin = 0;
+    let teardownMin = 0;
+    blocks.filter((b) => (b.teacher === tid || b.teacher2 === tid) && !b.staff).forEach((b) => {
+      if (b.room && b.room.toLowerCase() !== "various" && b.room.toLowerCase() !== "tbd") {
+        setupMin += params.setup * b.days.length;
+        teardownMin += params.teardown * b.days.length;
+      }
+    });
+    return { setupMin, teardownMin };
+  };
+
+  const doUndo = () => {
+    const entry = historyRef.current.undo(scheduleSnap());
+    if (!entry) return;
+    applyScheduleSnap(entry.snap);
+    setEditId(null);
+    bumpHistory();
+    if (entry.tab && entry.tab !== tab) {
+      setUndoNavModal({ targetTab: entry.tab, label: entry.label, direction: "undo" });
+    } else {
+      flash(`Undid: ${entry.label}`);
+    }
+  };
+
+  const doRedo = () => {
+    const entry = historyRef.current.redo(scheduleSnap());
+    if (!entry) return;
+    applyScheduleSnap(entry.snap);
+    setEditId(null);
+    bumpHistory();
+    if (entry.tab && entry.tab !== tab) {
+      setUndoNavModal({ targetTab: entry.tab, label: entry.label, direction: "redo" });
+    } else {
+      flash(`Redid: ${entry.label}`);
+    }
+  };
+
+  React.useEffect(() => {
+    function onKey(e) {
+      const tag = (e.target && e.target.tagName) || "";
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        doUndo();
+      } else if ((e.metaKey || e.ctrlKey) && (e.key === "Z" || e.key === "y")) {
+        e.preventDefault();
+        doRedo();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [tab, blocks, teachers, customRooms, extraGaps, deletedGaps, gapOv, params, dismissed]);
+
   // ACTUAL plan/break hours = what the teacher schedule actually shows (gaps + manual, minus hidden/deleted)
   const actualPlanHrs = (tid) => {
     let plan = 0, offsite = 0;
@@ -776,15 +954,22 @@ export default function App() {
   const ALL_SUBJECTS = ["Homeroom", "Humanities", "Math", "Science", "Latin", "Spanish", "Rhetoric", "Theology",
     "Logic", "Grammar", "Bible", "Art", "Music", "Wellness", "Formation", "Memory Work", "Reading", "Spelling", "Handwriting"];
   const addTeacher = () => {
+    pushHistory("Add teacher", "teachers");
     const id = `t${Date.now()}${Math.floor(Math.random() * 100)}`;
     setTeachers((ts) => [...ts, { id, name: "New Teacher", status: "TBD", subjects: [], note: "", firstClass: true }]);
     setEditTeacher(id);
     setExpandedTeacher(null);
+    ensurePlanExists();
     flash("Teacher added — edit the details");
   };
-  const setTeacherField = (id, patch) => setTeachers((ts) => ts.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+  const setTeacherField = (id, patch) => {
+    pushHistory("Edit teacher", "teachers");
+    setTeachers((ts) => ts.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+    ensurePlanExists();
+  };
   const teacherAssignments = (id) => blocks.filter((b) => (b.teacher === id || b.teacher2 === id) && !b.staff);
   const deleteTeacher = (id) => {
+    pushHistory("Remove teacher", "teachers");
     const n = teacherAssignments(id).length;
     if (n > 0) {
       // unassign rather than orphan the blocks
@@ -800,6 +985,7 @@ export default function App() {
     setGapOv((o) => Object.fromEntries(Object.entries(o).filter(([k]) => !k.startsWith(id + "|"))));
     if (editTeacher === id) setEditTeacher(null);
     if (expandedTeacher === id) setExpandedTeacher(null);
+    ensurePlanExists();
     flash(n > 0 ? `Teacher removed — ${n} assignment${n === 1 ? "" : "s"} left unassigned` : "Teacher removed");
   };
 
@@ -828,6 +1014,9 @@ export default function App() {
     setDismissed(plan.dismissed || []);
     setPlanName(plan.name || "Untitled Plan");
     setCurrentPlanId(plan.id);
+    setEditId(null);
+    historyRef.current.clear();
+    bumpHistory();
     if (!opts || !opts.silent) flash(`Loaded plan "${plan.name}"`);
   };
   const savePlan = async () => {
@@ -1047,7 +1236,7 @@ export default function App() {
           ${worst === "critical" ? "border-red-400 bg-red-50" : worst === "warning" ? "border-yellow-400 bg-yellow-50" : "border-gray-200 bg-white hover:border-blue-900"}
           ${editId === b.id ? "ring-2 ring-blue-900" : ""}`}>
         <div className="font-semibold text-gray-900 flex items-start justify-between gap-1">
-          <span>{b.splitGroup ? "⇄ " : ""}{b.course}</span>
+          <span>{b.splitGroup ? "⇄ " : ""}{b.course || "(New block)"}</span>
           {worst && <span className={`flex-shrink-0 rounded-full w-2 h-2 mt-1 ${worst === "critical" ? "bg-red-500" : "bg-yellow-500"}`} />}
         </div>
         <div className="text-gray-600 font-mono">{fmt(b.start)}–{fmt(b.end)} · {b.end - b.start}′</div>
@@ -1065,17 +1254,29 @@ export default function App() {
         <button onClick={() => setEditId(null)} className="text-gray-400 hover:text-gray-700 text-sm">✕</button>
       </div>
       <label className="block text-xs text-gray-500 mb-1">Course</label>
-      <input value={b.course} onChange={(e) => update(b.id, { course: e.target.value })}
+      <input value={b.course} placeholder="Course name"
+        onFocus={() => { blockEditSnapRef.current = scheduleSnap(); }}
+        onBlur={() => {
+          if (blockEditSnapRef.current && JSON.stringify(blockEditSnapRef.current.blocks) !== JSON.stringify(blocks)) {
+            historyRef.current.push(blockEditSnapRef.current, "Edit block", "schedule");
+            bumpHistory();
+            ensurePlanExists();
+          }
+          blockEditSnapRef.current = null;
+        }}
+        onChange={(e) => update(b.id, { course: e.target.value })}
         className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm mb-3 bg-white" />
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
           <label className="block text-xs text-gray-500 mb-1">Start</label>
-          <input type="time" value={toInput(b.start)} onChange={(e) => e.target.value && update(b.id, { start: t(e.target.value) })}
+          <input type="time" value={toInput(b.start)}
+            onChange={(e) => e.target.value && updateWithHistory(b.id, { start: t(e.target.value) }, "Change block time")}
             className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm bg-white" />
         </div>
         <div>
           <label className="block text-xs text-gray-500 mb-1">End</label>
-          <input type="time" value={toInput(b.end)} onChange={(e) => e.target.value && update(b.id, { end: t(e.target.value) })}
+          <input type="time" value={toInput(b.end)}
+            onChange={(e) => e.target.value && updateWithHistory(b.id, { end: t(e.target.value) }, "Change block time")}
             className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm bg-white" />
         </div>
       </div>
@@ -1083,18 +1284,18 @@ export default function App() {
       <label className="block text-xs text-gray-500 mb-1">Days</label>
       <div className="flex gap-1.5 mb-3">
         {DAYS.map((d) => (
-          <button key={d} onClick={() => update(b.id, { days: b.days.includes(d) ? b.days.filter((x) => x !== d) : [...b.days, d].sort((a, c) => DAYS.indexOf(a) - DAYS.indexOf(c)) })}
+          <button key={d} onClick={() => updateWithHistory(b.id, { days: b.days.includes(d) ? b.days.filter((x) => x !== d) : [...b.days, d].sort((a, c) => DAYS.indexOf(a) - DAYS.indexOf(c)) }, "Change block days")}
             className={`px-2.5 py-1 rounded text-xs font-semibold border ${b.days.includes(d) ? "bg-blue-900 text-white border-blue-900" : "bg-white text-gray-600 border-gray-300"}`}>{d}</button>
         ))}
       </div>
       <label className="block text-xs text-gray-500 mb-1">Teacher</label>
-      <select value={b.teacher || ""} onChange={(e) => update(b.id, { teacher: e.target.value || null })}
+      <select value={b.teacher || ""} onChange={(e) => updateWithHistory(b.id, { teacher: e.target.value || null }, "Change teacher")}
         className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm mb-3 bg-white">
         <option value="">— none / duty —</option>
         {teachers.map((tc) => <option key={tc.id} value={tc.id}>{tc.name}{tc.status === "TBD" ? " (TBD)" : ""}</option>)}
       </select>
       <label className="block text-xs text-gray-500 mb-1">Teacher 2 (optional — co-taught blocks)</label>
-      <select value={b.teacher2 || ""} onChange={(e) => update(b.id, { teacher2: e.target.value || null })}
+      <select value={b.teacher2 || ""} onChange={(e) => updateWithHistory(b.id, { teacher2: e.target.value || null }, "Change co-teacher")}
         className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm mb-3 bg-white">
         <option value="">— none —</option>
         {teachers.map((tc) => <option key={tc.id} value={tc.id}>{tc.name}{tc.status === "TBD" ? " (TBD)" : ""}</option>)}
@@ -1102,8 +1303,8 @@ export default function App() {
       <label className="flex items-center gap-2 text-xs text-gray-700 mb-1">
         <input type="checkbox" checked={!!b.splitGroup}
           onChange={(e) => {
-            if (!e.target.checked) update(b.id, { splitGroup: undefined });
-            else update(b.id, { splitGroup: `split-${b.id}` });
+            if (!e.target.checked) updateWithHistory(b.id, { splitGroup: undefined }, "Remove split group");
+            else updateWithHistory(b.id, { splitGroup: `split-${b.id}` }, "Add split group");
           }} />
         Concurrent split class (runs at the same time as a partner)
       </label>
@@ -1113,7 +1314,7 @@ export default function App() {
             const pid = e.target.value;
             // detach any current partners, then link the chosen one
             blocks.filter((o) => o.id !== b.id && o.splitGroup === b.splitGroup).forEach((o) => update(o.id, { splitGroup: undefined }));
-            if (pid) update(pid, { splitGroup: b.splitGroup });
+            if (pid) updateWithHistory(pid, { splitGroup: b.splitGroup }, "Link split partner");
           }}
           className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm mb-3 bg-white">
           <option value="">— choose the concurrent partner —</option>
@@ -1122,10 +1323,11 @@ export default function App() {
         </select>
       )}
       <label className="block text-xs text-gray-500 mb-1">Room</label>
-      <select value={b.room || ""} onChange={(e) => update(b.id, { room: e.target.value })}
+      <select value={b.room || ""} onChange={(e) => updateWithHistory(b.id, { room: e.target.value }, "Change room")}
         className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm mb-3 bg-white">
-        <option value="Various">Various (math sweep)</option>
+        <option value="">— select room —</option>
         {allRooms.map((r) => <option key={r} value={r}>{r}</option>)}
+        <option value="Various">Various (math sweep)</option>
       </select>
       <label className="block text-xs text-gray-500 mb-1">Audience — check all grades that attend</label>
       <div className="flex flex-wrap gap-1 mb-1">
@@ -1133,7 +1335,7 @@ export default function App() {
           <button key={g} onClick={() => {
             const cur = gradesOf(b);
             const next = cur.includes(g) ? cur.filter((x) => x !== g) : [...cur, g].sort((x, y) => GRADES.indexOf(x) - GRADES.indexOf(y));
-            update(b.id, { grades: next });
+            updateWithHistory(b.id, { grades: next }, "Change grades");
           }}
             className={`px-2 py-1 rounded text-xs font-semibold border ${gradesOf(b).includes(g) ? "bg-blue-900 text-white border-blue-900" : "bg-white text-gray-600 border-gray-300"}`}>
             {g}
@@ -1141,7 +1343,7 @@ export default function App() {
         ))}
       </div>
       <div className="flex items-center justify-between mb-3">
-        <button onClick={() => update(b.id, { grades: gradesOf(b).length === GRADES.length ? [] : GRADES.slice() })}
+        <button onClick={() => updateWithHistory(b.id, { grades: gradesOf(b).length === GRADES.length ? [] : GRADES.slice() }, "Change grades")}
           className="text-xs text-blue-900 underline">
           {gradesOf(b).length === GRADES.length ? "Clear all" : "K–12 (all school)"}
         </button>
@@ -1176,12 +1378,21 @@ export default function App() {
       {/* Navy header */}
       <style>{BRAND_CSS}</style>
       <nav className="ns-nav">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-5">
+        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-5 flex-wrap">
           <div className="flex items-center gap-3">
             <img src={CREST} alt="North Star Classical Christian School crest" width="34" height="34" />
             <div className="ns-mark">NORTH STAR<span className="ns-r">.</span></div>
           </div>
-          <div className="ns-cobrand">Schedule <b>Planner</b></div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <button type="button" onClick={doUndo} disabled={!undoEnabled}
+              className="text-xs font-semibold px-3 py-1.5 rounded border border-gray-300 bg-white disabled:opacity-40"
+              title="Undo (⌘Z / Ctrl+Z)">Undo</button>
+            <button type="button" onClick={doRedo} disabled={!redoEnabled}
+              className="text-xs font-semibold px-3 py-1.5 rounded border border-gray-300 bg-white disabled:opacity-40"
+              title="Redo (⌘⇧Z / Ctrl+Shift+Z)">Redo</button>
+            {autosaveLabel && <span className="text-xs text-gray-500" title="Autosave writes to recovery slot only — use Plans → Save for named plan">{autosaveLabel}</span>}
+            <div className="ns-cobrand">Schedule <b>Planner</b></div>
+          </div>
         </div>
       </nav>
       <header className="ns-hero">
@@ -1257,9 +1468,11 @@ export default function App() {
                         return dayBlocks.map((b) => renderBlock(b, b.splitGroup ? colorOf[b.splitGroup] : null));
                       })()}
                       <button onClick={() => {
-                        const nb = mk(band, "New block", "Core", [d], "9:00", "9:45", null, "Various");
-                        nb.grades = BAND_GRADES[band].slice();
-                        setBlocks((bs) => [...bs, nb]); setEditId(nb.id);
+                        pushHistory("Add block", "schedule");
+                        const nb = blankBlock(band, d);
+                        setBlocks((bs) => [...bs, nb]);
+                        setEditId(nb.id);
+                        ensurePlanExists();
                       }} className="w-full text-xs text-blue-900 border border-dashed border-blue-900 rounded px-2 py-1.5 mt-1 hover:bg-blue-50">
                         + Add block
                       </button>
@@ -1308,7 +1521,7 @@ export default function App() {
                         {c.needsLeadership ? "Policy decision — see PRD Part 6" : "Manual review"}
                       </span>
                     )}
-                    <button onClick={() => { setDismissed((d) => [...d, sigOf(c)]); flash("Marked resolved — restore from the list below"); }}
+                    <button onClick={() => { pushHistory("Dismiss conflict", "conflicts"); setDismissed((d) => [...d, sigOf(c)]); ensurePlanExists(); flash("Marked resolved — restore from the list below"); }}
                       className="text-xs text-gray-500 underline whitespace-nowrap">
                       Mark resolved
                     </button>
@@ -1334,7 +1547,7 @@ export default function App() {
                 {showDismissed && dismissedConflicts.map((c, i) => (
                   <div key={i} className="flex items-center gap-3 text-xs text-gray-500 mt-2">
                     <span className="flex-1">{c.type} — {c.detail}</span>
-                    <button onClick={() => setDismissed((d) => d.filter((s) => s !== sigOf(c)))}
+                    <button onClick={() => { pushHistory("Restore conflict", "conflicts"); setDismissed((d) => d.filter((s) => s !== sigOf(c))); ensurePlanExists(); }}
                       className="text-blue-900 underline whitespace-nowrap">Restore</button>
                   </div>
                 ))}
@@ -1687,9 +1900,12 @@ export default function App() {
           // ---- teacher report ----
           const teacherReport = (tid) => {
             const r = validation.rows.find((x) => x.id === tid) || validation.rows[0];
-            const mine = blocks.filter((b) => (b.teacher === r.id || b.teacher2 === r.id) && !b.staff);
-            // Full-day synthesis: arrival 7:45, Opening, plan gaps > transition, Tue cohorts 12:05–12:50, dismissal 3:25 + wrap-up 3:45
-            const byDay = DAYS.map((d) => ({ d, list: buildTeacherDay(r.id, d) }));
+            const facBuf = facilityBufferMinsForTeacher(r.id);
+            const facNote = `${facBuf.setupMin} min setup + ${facBuf.teardownMin} min teardown omitted from PDF rows and hour totals (room prep buffer)`;
+            const byDay = DAYS.map((d) => ({
+              d,
+              list: buildTeacherDay(r.id, d).filter((row) => !isFacilityPdfRow(row)),
+            }));
             return (
               <div>
                 {reportHeader(`Faculty Schedule — ${r.name}`, `AYE 2027`)}
@@ -1699,7 +1915,7 @@ export default function App() {
                   {metaTile("Assignments", r.blocks + " blocks")}
                   {metaTile("Teach hrs/wk ƒ", r.teachHrs.toFixed(1), "Σ(duration × days) ÷ 60")}
                   {metaTile("Plan hrs/wk ƒ", r.planActualHrs.toFixed(1), "actual scheduled plan & break")}
-                  {metaTile("Total hrs/wk ƒ", r.totalActualHrs.toFixed(1), "teaching + actual plan")}
+                  {metaTile("Total hrs/wk ƒ", r.totalActualHrs.toFixed(1), `teaching + actual plan. ${facNote}`)}
                 </div>
                 {byDay.map(({ d, list }) => list.length > 0 && (
                   <div key={d} style={{ pageBreakInside: "avoid" }}>
@@ -1987,6 +2203,8 @@ export default function App() {
                   <div className="text-xs text-gray-500 mt-0.5">{sub}</div>
                 </div>
                 <input type="number" step="0.1" value={params[k]}
+                  onFocus={() => { if (!paramsEditSnapRef.current) paramsEditSnapRef.current = scheduleSnap(); }}
+                  onBlur={commitParamsHistory}
                   onChange={(e) => setParams((p) => ({ ...p, [k]: Number(e.target.value) }))}
                   className="w-24 border border-gray-300 rounded px-2 py-1.5 text-right font-mono text-sm bg-white" />
               </div>
@@ -2005,6 +2223,8 @@ export default function App() {
                     <div className="text-gray-500">{sub}</div>
                   </div>
                   <input type="number" min="0" max="30" value={params[k] || 0}
+                    onFocus={() => { if (!paramsEditSnapRef.current) paramsEditSnapRef.current = scheduleSnap(); }}
+                    onBlur={commitParamsHistory}
                     onChange={(e) => setParams((p) => ({ ...p, [k]: Number(e.target.value) }))}
                     className="w-16 border border-gray-300 rounded px-1.5 py-1 text-right font-mono text-xs bg-white" />
                 </div>
@@ -2017,6 +2237,21 @@ export default function App() {
         )}
       </main>
 
+      {undoNavModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(10,36,64,.5)" }}>
+          <div className="bg-white rounded-md shadow-xl p-6 max-w-md mx-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">{undoNavModal.direction === "redo" ? "Redo" : "Undo"}: {undoNavModal.label}</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              This change belongs on the <strong>{TAB_LABELS[undoNavModal.targetTab] || undoNavModal.targetTab}</strong> tab. Go there to review?
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setUndoNavModal(null)} className="text-sm px-3 py-1.5 rounded border border-gray-300">Stay here</button>
+              <button onClick={() => { setTab(undoNavModal.targetTab); setUndoNavModal(null); flash(`${undoNavModal.direction === "redo" ? "Redid" : "Undid"}: ${undoNavModal.label}`); }}
+                className="text-sm px-3 py-1.5 rounded text-white ns-act">Go to {TAB_LABELS[undoNavModal.targetTab] || undoNavModal.targetTab}</button>
+            </div>
+          </div>
+        </div>
+      )}
       {confirmDelete && (
         <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(10,36,64,.5)" }}>
           <div className="bg-white rounded p-5 max-w-md w-11/12" style={{ borderTop: "3px solid #0a53b0" }}>
