@@ -43,6 +43,7 @@ let bootstrap = readSrc("bootstrap.js")
   .replace("__APP_VERSION__", appVersion);
 
 let storage = readSrc("storage.js");
+let history = readSrc("history.js");
 let auth = readSrc("auth.js");
 
 let app = readSrc("App.jsx");
@@ -69,7 +70,7 @@ if (exportCount !== 1) {
 }
 app = app.replace(/export\s+default\s+function\s+App\(\)/, "function App()");
 
-let src = [bootstrap, storage, auth, app].join("\n\n");
+let src = [bootstrap, storage, history, auth, app].join("\n\n");
 
 const leftovers = src.match(/^\s*(import|export)\b.*$/gm);
 if (leftovers) {

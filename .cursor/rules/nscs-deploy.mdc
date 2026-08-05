@@ -1,0 +1,19 @@
+---
+description: NSCS Schedule Planner — deploy workflow and client delivery
+alwaysApply: true
+---
+
+# NSCS Schedule Planner — Deploy & Delivery
+
+Before merging or deploying any change that touches production data or UX:
+
+1. **Supabase backup** — Run `source .env && node scripts/export-supabase.mjs` and confirm `backups/supabase-export-*.json` was written.
+2. **Version bump** — Update `package.json` version (patch/minor/major as appropriate). Build embeds it in `<meta name="app-version">`.
+3. **Tests** — Run `npm run test:all` (must pass).
+4. **Deploy** — Merge to `main`; Netlify auto-deploys from `main`.
+5. **Verify** — Confirm live site version at https://nscschedule.netlify.app/ and spot-check login + schedule load.
+6. **Client summary** — After deploy, provide a release note with version number, behavior changes (especially autosave/plan creation), and screenshots via Playwright MCP when UI changed.
+
+Autosave writes to **`plan_autosaves` only** (not named plans) unless explicitly changed. Call this out in client-facing summaries.
+
+Never run `npm run seed` against production without explicit approval.
