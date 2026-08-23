@@ -16,6 +16,23 @@ function ensureSupabaseClient() {
   return sb;
 }
 
+var DEFAULT_ROOMS = [
+  "202/203", "204", "205", "206", "207/208", "209/210", "211", "212", "213", "214",
+  "C130", "F.Hall", "COVE", "Gym", "Field", "TBD",
+];
+
+function resolvePlanRooms(metaOrPlan) {
+  var d = metaOrPlan || {};
+  if (d.rooms && d.rooms.length) return d.rooms.slice().sort();
+  if (d.planRooms && d.planRooms.length) return d.planRooms.slice().sort();
+  var legacy = d.customRooms || [];
+  var merged = DEFAULT_ROOMS.slice();
+  legacy.forEach(function (r) {
+    if (r && merged.indexOf(r) < 0) merged.push(r);
+  });
+  return merged.sort();
+}
+
 var BLOCK_ROW_KEYS = {
   id: 1, band: 1, course: 1, subject: 1, days: 1, start: 1, end: 1,
   teacher: 1, teacher2: 1, room: 1, anchor: 1, staff: 1, splitGroup: 1, grades: 1,
@@ -117,7 +134,7 @@ function planMetaFromRow(row) {
   if (!row) return {};
   var d = row.data || {};
   return {
-    customRooms: d.customRooms || [],
+    rooms: resolvePlanRooms(d),
     extraGaps: d.extraGaps || {},
     deletedGaps: d.deletedGaps || [],
     gapOv: d.gapOv || {},
@@ -151,7 +168,7 @@ function planFromRow(row) {
 
 function planToData(plan) {
   return {
-    customRooms: plan.customRooms || [],
+    rooms: resolvePlanRooms(plan),
     extraGaps: plan.extraGaps || {},
     deletedGaps: plan.deletedGaps || [],
     gapOv: plan.gapOv || {},

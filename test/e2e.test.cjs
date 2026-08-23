@@ -28,7 +28,7 @@ function boot(label) {
   global.supabase = w.supabase = { createClient: () => ({ auth: { getSession: () => Promise.resolve({ data: { session: null } }), onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }) } }) };
   global.html2pdf = w.html2pdf = () => ({ set(){return this;}, from(){return this;}, save(){return Promise.resolve();} });
   w.confirm = global.confirm = () => true;
-  w.prompt = global.prompt = () => "Renamed";
+  w.prompt = global.prompt = (msg, def) => def || 'Renamed';
   w.alert = global.alert = () => {};
   w.addEventListener('error', e => errors.push(`[${label}] window error: ${e.message}`));
   const orig = console.error;
@@ -74,9 +74,11 @@ const storageDump = () => (globalThis.__NSCS_DUMP__ ? globalThis.__NSCS_DUMP__()
   if (!plan) {
     check('S1: plan object available', false, 'missing');
   } else {
-  for (const f of ['blocks','teachers','customRooms','extraGaps','deletedGaps','gapOv','params','dismissed','name','updatedAt']) {
+  for (const f of ['blocks','teachers','extraGaps','deletedGaps','gapOv','params','dismissed','name','updatedAt']) {
     check(`S1: plan field "${f}" saved`, f in plan);
   }
+  const planRoomList = plan.rooms || [];
+  check('S1: plan rooms list saved', Array.isArray(planRoomList) && planRoomList.length > 0, `${planRoomList.length} room(s)`);
   check('S1: params saved with facility keys', plan.params && ['setup','teardown','cleaning','idle'].every(k => k in plan.params));
   check('S1: dayEnd is 15:45 (945 min)', plan.params && plan.params.dayEnd === 945, `got ${plan.params && plan.params.dayEnd}`);
   const s1Blocks = (plan.blocks || []).length;
@@ -164,6 +166,22 @@ const storageDump = () => (globalThis.__NSCS_DUMP__ ? globalThis.__NSCS_DUMP__()
       dump = storageDump();
       const savedPlan = (dump.plans || []).find(p => (p.blocks || []).some(bl => bl.room === testRoom));
       check('ROOM: room value survives explicit save', !!savedPlan, savedPlan ? `room ${testRoom}` : 'not found');
+    }
+  }
+
+  // Editable plan rooms UI
+  await act(async () => { btnByText(doc, /Parameters/).click(); await flush(); });
+  const roomRenameBtns = [...doc.querySelectorAll('button')].filter(b => /^Rename$/i.test(b.textContent.trim()));
+  const roomDeleteBtns = [...doc.querySelectorAll('button')].filter(b => /^Delete$/i.test(b.textContent.trim()));
+  check('ROOMS: room table has Rename actions', roomRenameBtns.length >= 16, `${roomRenameBtns.length} button(s)`);
+  check('ROOMS: room table has Delete actions', roomDeleteBtns.length >= 16, `${roomDeleteBtns.length} button(s)`);
+  const tbdRow = [...doc.querySelectorAll('tr')].find(tr => tr.querySelector('td') && tr.querySelector('td').textContent.trim() === 'TBD');
+  if (tbdRow) {
+    w.prompt = global.prompt = (msg, def) => (def === 'TBD' ? 'TBD-Renamed' : def);
+    const tbdRename = [...tbdRow.querySelectorAll('button')].find(b => /^Rename$/i.test(b.textContent.trim()));
+    if (tbdRename) {
+      await act(async () => { tbdRename.click(); await flush(200); });
+      check('ROOMS: rename updates room table', /TBD-Renamed/.test(doc.getElementById('root').innerHTML) && !/>\s*TBD\s*</.test(doc.getElementById('root').innerHTML));
     }
   }
 

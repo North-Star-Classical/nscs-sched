@@ -25,6 +25,11 @@ const sb = createClient(url, serviceKey);
 const seedPath = join(root, "scripts", "seed-data.json");
 const seed = JSON.parse(readFileSync(seedPath, "utf8"));
 
+const DEFAULT_ROOMS = [
+  "202/203", "204", "205", "206", "207/208", "209/210", "211", "212", "213", "214",
+  "C130", "F.Hall", "COVE", "Gym", "Field", "TBD",
+];
+
 const planId = seed.id || "plan-aye-2027-default";
 const now = new Date().toISOString();
 
@@ -32,7 +37,7 @@ const planRow = {
   id: planId,
   name: seed.name || "AYE 2027 Draft",
   data: {
-    customRooms: seed.customRooms || [],
+    rooms: (seed.rooms && seed.rooms.length) ? seed.rooms : DEFAULT_ROOMS.slice().sort(),
     extraGaps: seed.extraGaps || {},
     deletedGaps: seed.deletedGaps || [],
     gapOv: seed.gapOv || {},
