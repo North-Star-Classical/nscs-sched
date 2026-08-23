@@ -142,6 +142,31 @@ const storageDump = () => (globalThis.__NSCS_DUMP__ ? globalThis.__NSCS_DUMP__()
   const newest = plansAfter.reduce((a,b) => ((a.updatedAt||'') > (b.updatedAt||'') ? a : b), plansAfter[0] || {});
   check('S3: explicit save is newest', !!newest.updatedAt);
 
+  // Room field visibility + persistence
+  await act(async () => { btnByText(doc, /Schedule Grid/).click(); await flush(); });
+  const blockBtn = [...doc.querySelectorAll('button')].find(b => /Rm |Room:|No room — click to set/.test(b.textContent));
+  check('ROOM: schedule grid shows room on block tile', !!blockBtn);
+  if (blockBtn) {
+    await act(async () => { blockBtn.click(); await flush(); });
+    const roomLabel = [...doc.querySelectorAll('label')].find(l => /^Room$/i.test(l.textContent.trim()));
+    const roomSelect = roomLabel && roomLabel.parentElement && roomLabel.parentElement.querySelector('select');
+    check('ROOM: block editor exposes Room control', !!roomSelect);
+    if (roomSelect) {
+      const testRoom = '212';
+      await act(async () => {
+        roomSelect.value = testRoom;
+        roomSelect.dispatchEvent(new w.Event('change', { bubbles: true }));
+        await flush();
+      });
+      await act(async () => { btnByText(doc, /^Plans$/).click(); await flush(); });
+      const saveRoomBtn = btnByText(doc, /Save/i);
+      if (saveRoomBtn) { await act(async () => { saveRoomBtn.click(); await flush(400); }); }
+      dump = storageDump();
+      const savedPlan = (dump.plans || []).find(p => (p.blocks || []).some(bl => bl.room === testRoom));
+      check('ROOM: room value survives explicit save', !!savedPlan, savedPlan ? `room ${testRoom}` : 'not found');
+    }
+  }
+
   console.log('\n════════ FULL VALIDATION RESULTS ════════');
   results.forEach(r => console.log(r));
   const fails = results.filter(r => r.startsWith('✗')).length;

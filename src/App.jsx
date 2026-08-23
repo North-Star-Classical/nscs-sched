@@ -1409,7 +1409,10 @@ export default function App() {
           {worst && <span className={`flex-shrink-0 rounded-full w-2 h-2 mt-1 ${worst === "critical" ? "bg-red-500" : "bg-yellow-500"}`} />}
         </div>
         <div className="text-gray-600 font-mono">{blockHasTime(b) ? `${fmt(b.start)}–${fmt(b.end)} · ${b.end - b.start}′` : "No time — set in editor"}</div>
-        <div className="text-gray-500">{[tName(b.teacher), b.teacher2 ? tName(b.teacher2) : null].filter((x) => x && x !== "—").join(" + ") || "—"}{b.room ? ` · Rm ${b.room}` : ""}</div>
+        <div className="text-gray-500">{[tName(b.teacher), b.teacher2 ? tName(b.teacher2) : null].filter((x) => x && x !== "—").join(" + ") || "—"}</div>
+        <div className={b.room ? "text-gray-700 font-medium" : "text-amber-700 italic"}>
+          {b.room ? `Room: ${b.room}` : "No room — click to set"}
+        </div>
       </button>
     );
   };
@@ -1435,6 +1438,20 @@ export default function App() {
         }}
         onChange={(e) => update(b.id, { course: e.target.value })}
         className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm mb-3 bg-white" />
+      <label className="block text-xs text-gray-500 mb-1">Room</label>
+      <select value={b.room || ""} onChange={(e) => updateWithHistory(b.id, { room: e.target.value }, "Change room")}
+        className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm mb-1 bg-white">
+        <option value="">— select room —</option>
+        {allRooms.map((r) => <option key={r} value={r}>{r}</option>)}
+        {b.room && b.room !== "Various" && !allRooms.includes(b.room) && (
+          <option value={b.room}>{b.room} (legacy)</option>
+        )}
+        <option value="Various">Various (math sweep)</option>
+      </select>
+      <p className="text-xs text-gray-500 mb-1">Pick a room for conflict checking. Add new room names on the Parameters tab.</p>
+      <button type="button" onClick={() => setTab("params")} className="text-xs text-blue-900 underline mb-3 block">
+        Manage room list →
+      </button>
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
           <label className="block text-xs text-gray-500 mb-1">Start</label>
@@ -1491,13 +1508,6 @@ export default function App() {
             .map((o) => <option key={o.id} value={o.id}>{o.course} · {fmt(o.start)} · {gradeLabel(gradesOf(o))}</option>)}
         </select>
       )}
-      <label className="block text-xs text-gray-500 mb-1">Room</label>
-      <select value={b.room || ""} onChange={(e) => updateWithHistory(b.id, { room: e.target.value }, "Change room")}
-        className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm mb-3 bg-white">
-        <option value="">— select room —</option>
-        {allRooms.map((r) => <option key={r} value={r}>{r}</option>)}
-        <option value="Various">Various (math sweep)</option>
-      </select>
       <label className="block text-xs text-gray-500 mb-1">Audience — check all grades that attend</label>
       <div className="flex flex-wrap gap-1 mb-1">
         {GRADES.map((g) => (
@@ -1655,6 +1665,9 @@ export default function App() {
             <p className="text-xs text-gray-500 mt-4">
               ƒ Day totals sum block durations against the {params.budgetMin}-minute instructional budget (PRD 3.4 §19). Combined-band blocks (Wellness 3–6, US formations) appear on every constituent band's grid.
             </p>
+            <p className="text-xs text-gray-500 mt-2">
+              Click any block to edit it. Set <strong>Room</strong> in the editor panel on the right (or below on mobile). Room conflicts appear on the Conflicts tab.
+            </p>
           </div>
         )}
 
@@ -1702,7 +1715,7 @@ export default function App() {
                     {c.blocks.slice(0, 6).map((b) => (
                       <button key={b.id} onClick={() => { const g0 = gradesOf(b)[0]; const bd = BANDS.find((x) => BAND_GRADES[x].includes(g0)) || band; setBand(bd); setTab("schedule"); setEditId(b.id); }}
                         className="text-xs font-mono bg-white border border-gray-300 rounded px-2 py-0.5 hover:border-blue-900">
-                        {b.course} · {gradeLabel(gradesOf(b))} · {b.days.join("/")}
+                        {b.course} · {gradeLabel(gradesOf(b))} · {b.days.join("/")}{b.room ? ` · Rm ${b.room}` : ""}
                       </button>
                     ))}
                   </div>
