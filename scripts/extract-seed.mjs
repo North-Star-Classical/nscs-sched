@@ -20,13 +20,18 @@ const result = buildSync({
 const fn = new Function(result.outputFiles[0].text + "; return { blocks: SEED_BLOCKS, teachers: SEED_TEACHERS, params: DEFAULT_PARAMS };");
 const { blocks, teachers, params } = fn();
 
+const DEFAULT_ROOMS = [
+  "202/203", "204", "205", "206", "207/208", "209/210", "211", "212", "213", "214",
+  "C130", "F.Hall", "COVE", "Gym", "Field", "TBD",
+];
+
 const out = {
   id: "plan-aye-2027-default",
   name: "AYE 2027 Draft",
   blocks,
   teachers,
   params,
-  customRooms: [],
+  rooms: DEFAULT_ROOMS.slice().sort(),
   extraGaps: {},
   deletedGaps: [],
   gapOv: {},

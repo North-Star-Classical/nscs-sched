@@ -86,7 +86,6 @@ const t0745 = 7 * 60 + 45, t0815 = 8 * 60 + 15, t0825 = 8 * 60 + 25;
 const DAY_NAMES = { M: "Monday", T: "Tuesday", W: "Wednesday", Th: "Thursday" };
 
 // ---------- reference data ----------
-const ROOMS = ["202/203", "204", "205", "206", "207/208", "209/210", "211", "212", "213", "214", "C130", "F.Hall", "COVE", "Gym", "Field", "TBD"];
 const SHARED_SPACES = ["F.Hall", "COVE", "Gym", "Field", "Foyer"];
 
 const BANDS = ["K", "1st", "2nd", "3rd/4th", "5th/6th", "7th/8th", "9th/10th", "11th/12th"];
@@ -388,7 +387,7 @@ export default function App() {
   const [planName, setPlanName] = useState("Untitled Plan");
   const [newPlanName, setNewPlanName] = useState("");
   const [showPlansList, setShowPlansList] = useState(false);
-  const [customRooms, setCustomRooms] = useState([]);
+  const [planRooms, setPlanRooms] = useState(() => DEFAULT_ROOMS.slice().sort());
   const [newRoomInput, setNewRoomInput] = useState("");   // tid -> [{id,label,days,start,end}]
   const [deletedGaps, setDeletedGaps] = useState([]); // gapKeyFor() strings removed by the user
   const [showDismissed, setShowDismissed] = useState(false);
@@ -406,13 +405,13 @@ export default function App() {
   const scheduleApiRef = React.useRef({});
 
   const scheduleSnap = () => ({
-    blocks, teachers, customRooms, extraGaps, deletedGaps, gapOv, params, dismissed,
+    blocks, teachers, rooms: planRooms, extraGaps, deletedGaps, gapOv, params, dismissed,
   });
 
   const applyScheduleSnap = (snap) => {
     setBlocks(snap.blocks || []);
     setTeachers(snap.teachers || []);
-    setCustomRooms(snap.customRooms || []);
+    setPlanRooms(snap.rooms ? snap.rooms.slice() : resolvePlanRooms(snap));
     setExtraGaps(snap.extraGaps || {});
     setDeletedGaps(snap.deletedGaps || []);
     setGapOv(snap.gapOv || {});
@@ -439,7 +438,7 @@ export default function App() {
       const id = `plan-${Date.now()}`;
       const name = planName || "Untitled Plan";
       const snapshot = {
-        id, name, blocks, teachers, customRooms, extraGaps, deletedGaps, gapOv, params, dismissed,
+        id, name, blocks, teachers, rooms: planRooms, extraGaps, deletedGaps, gapOv, params, dismissed,
         createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       };
       try {
@@ -465,7 +464,7 @@ export default function App() {
     const planId = currentPlanId || await ensurePlanExists();
     if (!planId) return;
     const snap = {
-      id: planId, name: planName, blocks, teachers, customRooms, extraGaps, deletedGaps, gapOv, params, dismissed,
+      id: planId, name: planName, blocks, teachers, rooms: planRooms, extraGaps, deletedGaps, gapOv, params, dismissed,
       updatedAt: new Date().toISOString(),
     };
     try {
@@ -476,7 +475,7 @@ export default function App() {
       console.error("Autosave failed:", e);
       setAutosaveLabel("Auto-save failed");
     }
-  }, [blocks, teachers, customRooms, extraGaps, deletedGaps, gapOv, params, dismissed, planName, currentPlanId]);
+  }, [blocks, teachers, planRooms, extraGaps, deletedGaps, gapOv, params, dismissed, planName, currentPlanId]);
 
   scheduleApiRef.current.pushHistory = pushHistory;
   scheduleApiRef.current.ensurePlan = ensurePlanExists;
@@ -527,7 +526,7 @@ export default function App() {
     if (!bootedRef.current) return;
     var timer = setTimeout(function () { runAutosave(); }, 1000);
     return function () { clearTimeout(timer); };
-  }, [blocks, teachers, customRooms, extraGaps, deletedGaps, gapOv, params, dismissed, planName, currentPlanId, runAutosave]);
+  }, [blocks, teachers, planRooms, extraGaps, deletedGaps, gapOv, params, dismissed, planName, currentPlanId, runAutosave]);
 
   React.useEffect(() => {
     if (!bootedRef.current) return;
@@ -567,7 +566,7 @@ export default function App() {
       });
     });
 
-    const freeRoom = (b) => ROOMS.find((r) =>
+    const freeRoom = (b) => planRooms.find((r) =>
       !SHARED_SPACES.includes(r) &&
       !real.some((o) => o.id !== b.id && o.room === r && shareDay(o, b) && overlap(o, b))
     );
@@ -772,7 +771,7 @@ export default function App() {
 
     const order = { critical: 0, warning: 1 };
     return out.sort((a, b) => order[a.sev] - order[b.sev]);
-  }, [blocks, teachers, params, tById]);
+  }, [blocks, teachers, params, tById, planRooms]);
 
   const activeConflicts = conflicts.filter((c) => !dismissed.includes(sigOf(c)));
   const dismissedConflicts = conflicts.filter((c) => dismissed.includes(sigOf(c)));
@@ -967,7 +966,7 @@ export default function App() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [tab, blocks, teachers, customRooms, extraGaps, deletedGaps, gapOv, params, dismissed]);
+  }, [tab, blocks, teachers, planRooms, extraGaps, deletedGaps, gapOv, params, dismissed]);
 
   // ACTUAL plan/break hours = what the teacher schedule actually shows (gaps + manual, minus hidden/deleted)
   const actualPlanHrs = (tid) => {
@@ -1041,7 +1040,7 @@ export default function App() {
     if (!plan) return;
     setBlocks(plan.blocks || []);
     setTeachers(plan.teachers || []);
-    setCustomRooms(plan.customRooms || []);
+    setPlanRooms(plan.rooms ? plan.rooms.slice() : resolvePlanRooms(plan));
     setExtraGaps(plan.extraGaps || {});
     setDeletedGaps(plan.deletedGaps || []);
     setGapOv(plan.gapOv || {});
@@ -1062,7 +1061,7 @@ export default function App() {
         : "Save with no schedule blocks?";
       if (!confirm(msg)) return;
     }
-    const snapshot = { blocks, teachers, customRooms, extraGaps, deletedGaps, gapOv, params, dismissed, name: planName || "Untitled Plan", updatedAt: new Date().toISOString() };
+    const snapshot = { blocks, teachers, rooms: planRooms, extraGaps, deletedGaps, gapOv, params, dismissed, name: planName || "Untitled Plan", updatedAt: new Date().toISOString() };
     let id = currentPlanId;
     let updated;
     if (currentPlanId && plans.some((p) => p.id === currentPlanId)) {
@@ -1086,7 +1085,7 @@ export default function App() {
   const createPlan = async () => {
     const name = newPlanName.trim() || "New Plan";
     const id = `plan-${Date.now()}`;
-    const newPlan = { id, name, blocks: [], teachers: SEED_TEACHERS.slice(), customRooms: [], extraGaps: {}, deletedGaps: [], gapOv: {}, params: { ...DEFAULT_PARAMS }, dismissed: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const newPlan = { id, name, blocks: [], teachers: SEED_TEACHERS.slice(), rooms: DEFAULT_ROOMS.slice().sort(), extraGaps: {}, deletedGaps: [], gapOv: {}, params: { ...DEFAULT_PARAMS }, dismissed: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     try {
       await getStorage().upsertPlan(newPlan);
       const updated = [...plans, newPlan];
@@ -1111,7 +1110,7 @@ export default function App() {
       name: source.name + " (copy)",
       blocks: (source.blocks || []).map((b) => ({ ...b })),
       teachers: (source.teachers || []).map((t) => ({ ...t })),
-      customRooms: [...(source.customRooms || [])],
+      rooms: (source.rooms || resolvePlanRooms(source)).slice(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -1271,19 +1270,36 @@ export default function App() {
     loadBackupsList();
   }, [tab, plansLoading]);
 
-  // custom rooms
-  const allRooms = [...ROOMS, ...customRooms].sort();
   const addRoom = () => {
     const r = newRoomInput.trim();
     if (!r) return;
-    if (allRooms.includes(r)) {
+    if (planRooms.includes(r)) {
       flash(`"${r}" already exists`);
       setNewRoomInput("");
       return;
     }
-    setCustomRooms((cs) => [...cs, r]);
+    pushHistory("Add room", "params");
+    setPlanRooms((rs) => [...rs, r].sort());
     setNewRoomInput("");
     flash(`Room "${r}" added`);
+    ensurePlanExists();
+  };
+  const renameRoom = (oldName, newName) => {
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === oldName) return;
+    if (planRooms.includes(trimmed)) {
+      flash(`"${trimmed}" already exists`);
+      return;
+    }
+    const count = blocks.filter((b) => b.room === oldName).length;
+    if (count) pushHistory(`Rename room ${oldName} → ${trimmed}`, "schedule");
+    else pushHistory("Rename room", "params");
+    setPlanRooms((rs) => rs.map((x) => (x === oldName ? trimmed : x)).sort());
+    if (count) {
+      setBlocks((bs) => bs.map((b) => (b.room === oldName ? { ...b, room: trimmed } : b)));
+    }
+    flash(`Renamed "${oldName}" → "${trimmed}"${count ? ` (${count} block${count > 1 ? "s" : ""} updated)` : ""}`);
+    ensurePlanExists();
   };
   const deleteRoom = (r) => {
     const used = blocks.filter((b) => b.room === r).length;
@@ -1291,8 +1307,10 @@ export default function App() {
       flash(`Cannot delete — "${r}" is in use by ${used} block${used > 1 ? "s" : ""}. Reassign them first.`);
       return;
     }
-    setCustomRooms((cs) => cs.filter((x) => x !== r));
+    pushHistory("Delete room", "params");
+    setPlanRooms((rs) => rs.filter((x) => x !== r));
     flash(`Room "${r}" removed`);
+    ensurePlanExists();
   };
 
   // -------------------- report helpers --------------------
@@ -1442,8 +1460,8 @@ export default function App() {
       <select value={b.room || ""} onChange={(e) => updateWithHistory(b.id, { room: e.target.value }, "Change room")}
         className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm mb-1 bg-white">
         <option value="">— select room —</option>
-        {allRooms.map((r) => <option key={r} value={r}>{r}</option>)}
-        {b.room && b.room !== "Various" && !allRooms.includes(b.room) && (
+        {planRooms.map((r) => <option key={r} value={r}>{r}</option>)}
+        {b.room && b.room !== "Various" && !planRooms.includes(b.room) && (
           <option value={b.room}>{b.room} (legacy)</option>
         )}
         <option value="Various">Various (math sweep)</option>
@@ -2407,7 +2425,7 @@ export default function App() {
             </div>
 
             <div className="bg-gray-50 border border-gray-200 rounded p-3 text-xs text-gray-600">
-              <strong>How it works:</strong> Each plan is a complete snapshot of the schedule — all blocks, teachers, custom rooms, and plan entries. <strong>Save</strong> writes the current plan to the cloud. <strong>Auto-save</strong> protects unsaved edits separately. Use <strong>Create backup</strong> before major changes; <strong>Restore</strong> rolls matching schedules back to that snapshot.
+              <strong>How it works:</strong> Each plan is a complete snapshot of the schedule — all blocks, teachers, rooms, and plan entries. <strong>Save</strong> writes the current plan to the cloud. <strong>Auto-save</strong> protects unsaved edits separately. Use <strong>Create backup</strong> before major changes; <strong>Restore</strong> rolls matching schedules back to that snapshot.
             </div>
           </div>
         )}
@@ -2426,20 +2444,39 @@ export default function App() {
                     className="flex-1 border border-gray-300 rounded px-2 py-1.5 text-xs bg-white" />
                   <button onClick={addRoom} className="ns-act text-xs">+ Add</button>
                 </div>
-                {customRooms.length > 0 && (
-                  <div>
-                    <div className="text-xs text-gray-500 mb-1">Custom rooms:</div>
-                    <div className="flex flex-wrap gap-2">
-                      {customRooms.map((r) => (
-                        <span key={r} className="bg-gray-100 border border-gray-300 rounded px-2 py-1 text-xs flex items-center gap-1.5">
-                          {r}
-                          <button onClick={() => deleteRoom(r)} className="text-gray-400 hover:text-red-600 font-bold">×</button>
-                        </span>
-                      ))}
-                    </div>
+                <p className="text-xs text-gray-500">Add, rename, or delete rooms for this schedule. Renaming updates all blocks using that room.</p>
+                {planRooms.length > 0 ? (
+                  <div className="overflow-x-auto border border-gray-200 rounded">
+                    <table className="w-full text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-200 text-left text-gray-600 bg-gray-50">
+                          <th className="py-2 px-2 font-semibold">Room</th>
+                          <th className="py-2 px-2 font-semibold text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {planRooms.map((r) => (
+                          <tr key={r} className="border-b border-gray-100">
+                            <td className="py-2 px-2 font-medium text-gray-900">{r}</td>
+                            <td className="py-2 px-2 text-right whitespace-nowrap">
+                              <button type="button" onClick={() => {
+                                const newN = prompt("Rename room to:", r);
+                                if (newN) renameRoom(r, newN);
+                              }} className="text-xs px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 mr-1">
+                                Rename
+                              </button>
+                              <button type="button" onClick={() => deleteRoom(r)} className="text-xs px-2 py-1 rounded border border-red-300 text-red-700 hover:bg-red-50">
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
+                ) : (
+                  <div className="text-xs text-gray-500 italic p-3 bg-gray-50 rounded">No rooms yet. Add one above.</div>
                 )}
-                <div className="text-xs text-gray-500 italic">Built-in: {ROOMS.join(", ")}</div>
               </div>
             </fieldset>
             {[
