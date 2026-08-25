@@ -46,6 +46,9 @@ let storage = readSrc("storage.js");
 let history = readSrc("history.js");
 let auth = readSrc("auth.js");
 
+const mathSeedRaw = readFileSync(join(root, "scripts", "math-roster-seed.json"), "utf8");
+let mathRoster = readSrc("mathRoster.js").replace("__MATH_ROSTER_SEED__", mathSeedRaw);
+
 let app = readSrc("App.jsx");
 
 // React import -> strip; hooks use React.useState / React.useMemo (UMD global)
@@ -70,7 +73,7 @@ if (exportCount !== 1) {
 }
 app = app.replace(/export\s+default\s+function\s+App\(\)/, "function App()");
 
-let src = [bootstrap, storage, history, auth, app].join("\n\n");
+let src = [bootstrap, storage, history, auth, mathRoster, app].join("\n\n");
 
 const leftovers = src.match(/^\s*(import|export)\b.*$/gm);
 if (leftovers) {

@@ -49,7 +49,7 @@ const storageDump = () => (globalThis.__NSCS_DUMP__ ? globalThis.__NSCS_DUMP__()
   let doc = w.document;
   check('S1: app renders', doc.getElementById('root').innerHTML.length > 5000);
 
-  for (const [re, name] of [[/Schedule Grid/, 'Schedule'], [/Conflicts/, 'Conflicts'], [/Teachers & Load/, 'Teachers'], [/Report Generator/, 'Reports'], [/^Plans$/, 'Plans'], [/Parameters/, 'Parameters']]) {
+  for (const [re, name] of [[/Schedule Grid/, 'Schedule'], [/Conflicts/, 'Conflicts'], [/Teachers & Load/, 'Teachers'], [/Math Roster/, 'Math Roster'], [/Report Generator/, 'Reports'], [/^Plans$/, 'Plans'], [/Parameters/, 'Parameters']]) {
     const b = btnByText(doc, re);
     check(`S1: "${name}" tab in nav`, !!b);
     if (b) { await act(async () => { b.click(); await flush(); }); check(`S1: "${name}" tab renders`, doc.getElementById('root').innerHTML.length > 3000); }
@@ -79,6 +79,7 @@ const storageDump = () => (globalThis.__NSCS_DUMP__ ? globalThis.__NSCS_DUMP__()
   }
   const planRoomList = plan.rooms || [];
   check('S1: plan rooms list saved', Array.isArray(planRoomList) && planRoomList.length > 0, `${planRoomList.length} room(s)`);
+  check('S1: mathRoster saved with plan', !!(plan.mathRoster && plan.mathRoster.students && plan.mathRoster.students.length > 0), plan.mathRoster ? `${plan.mathRoster.students.length} students` : 'missing');
   check('S1: params saved with facility keys', plan.params && ['setup','teardown','cleaning','idle'].every(k => k in plan.params));
   check('S1: dayEnd is 15:45 (945 min)', plan.params && plan.params.dayEnd === 945, `got ${plan.params && plan.params.dayEnd}`);
   const s1Blocks = (plan.blocks || []).length;
@@ -184,6 +185,11 @@ const storageDump = () => (globalThis.__NSCS_DUMP__ ? globalThis.__NSCS_DUMP__()
       check('ROOMS: rename updates room table', /TBD-Renamed/.test(doc.getElementById('root').innerHTML) && !/>\s*TBD\s*</.test(doc.getElementById('root').innerHTML));
     }
   }
+
+  // Math roster tab
+  await act(async () => { btnByText(doc, /Math Roster/).click(); await flush(); });
+  check('MATH: roster tab renders sections table', /Class sections \(course · room · teacher\)/.test(doc.getElementById('root').innerHTML));
+  check('MATH: roster has student rows', /Consolidated Placements/.test(doc.getElementById('root').innerHTML));
 
   console.log('\n════════ FULL VALIDATION RESULTS ════════');
   results.forEach(r => console.log(r));

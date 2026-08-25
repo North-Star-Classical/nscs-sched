@@ -388,6 +388,9 @@ export default function App() {
   const [newPlanName, setNewPlanName] = useState("");
   const [showPlansList, setShowPlansList] = useState(false);
   const [planRooms, setPlanRooms] = useState(() => DEFAULT_ROOMS.slice().sort());
+  const [mathRoster, setMathRoster] = useState(() => defaultMathRoster());
+  const [mathSectionFilter, setMathSectionFilter] = useState("");
+  const [mathShowUnplaced, setMathShowUnplaced] = useState(false);
   const [newRoomInput, setNewRoomInput] = useState("");   // tid -> [{id,label,days,start,end}]
   const [deletedGaps, setDeletedGaps] = useState([]); // gapKeyFor() strings removed by the user
   const [showDismissed, setShowDismissed] = useState(false);
@@ -405,13 +408,14 @@ export default function App() {
   const scheduleApiRef = React.useRef({});
 
   const scheduleSnap = () => ({
-    blocks, teachers, rooms: planRooms, extraGaps, deletedGaps, gapOv, params, dismissed,
+    blocks, teachers, rooms: planRooms, mathRoster, extraGaps, deletedGaps, gapOv, params, dismissed,
   });
 
   const applyScheduleSnap = (snap) => {
     setBlocks(snap.blocks || []);
     setTeachers(snap.teachers || []);
     setPlanRooms(snap.rooms ? snap.rooms.slice() : resolvePlanRooms(snap));
+    setMathRoster(snap.mathRoster ? normalizeMathRoster(snap.mathRoster) : defaultMathRoster());
     setExtraGaps(snap.extraGaps || {});
     setDeletedGaps(snap.deletedGaps || []);
     setGapOv(snap.gapOv || {});
@@ -438,7 +442,7 @@ export default function App() {
       const id = `plan-${Date.now()}`;
       const name = planName || "Untitled Plan";
       const snapshot = {
-        id, name, blocks, teachers, rooms: planRooms, extraGaps, deletedGaps, gapOv, params, dismissed,
+        id, name, blocks, teachers, rooms: planRooms, mathRoster, extraGaps, deletedGaps, gapOv, params, dismissed,
         createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       };
       try {
@@ -464,7 +468,7 @@ export default function App() {
     const planId = currentPlanId || await ensurePlanExists();
     if (!planId) return;
     const snap = {
-      id: planId, name: planName, blocks, teachers, rooms: planRooms, extraGaps, deletedGaps, gapOv, params, dismissed,
+      id: planId, name: planName, blocks, teachers, rooms: planRooms, mathRoster, extraGaps, deletedGaps, gapOv, params, dismissed,
       updatedAt: new Date().toISOString(),
     };
     try {
@@ -475,7 +479,7 @@ export default function App() {
       console.error("Autosave failed:", e);
       setAutosaveLabel("Auto-save failed");
     }
-  }, [blocks, teachers, planRooms, extraGaps, deletedGaps, gapOv, params, dismissed, planName, currentPlanId]);
+  }, [blocks, teachers, planRooms, mathRoster, extraGaps, deletedGaps, gapOv, params, dismissed, planName, currentPlanId]);
 
   scheduleApiRef.current.pushHistory = pushHistory;
   scheduleApiRef.current.ensurePlan = ensurePlanExists;
@@ -526,7 +530,7 @@ export default function App() {
     if (!bootedRef.current) return;
     var timer = setTimeout(function () { runAutosave(); }, 1000);
     return function () { clearTimeout(timer); };
-  }, [blocks, teachers, planRooms, extraGaps, deletedGaps, gapOv, params, dismissed, planName, currentPlanId, runAutosave]);
+  }, [blocks, teachers, planRooms, mathRoster, extraGaps, deletedGaps, gapOv, params, dismissed, planName, currentPlanId, runAutosave]);
 
   React.useEffect(() => {
     if (!bootedRef.current) return;
@@ -545,7 +549,7 @@ export default function App() {
   const sigOf = (c) => `${c.type}|${(c.blocks || []).map((b) => b.id).sort().join(",")}|${c.bandRef || ""}`;
   const undoEnabled = historyRev >= 0 && historyRef.current.canUndo();
   const redoEnabled = historyRev >= 0 && historyRef.current.canRedo();
-  const TAB_LABELS = { schedule: "Schedule Grid", conflicts: "Conflicts & Resolutions", teachers: "Teachers & Load", reports: "Report Generator", plans: "Plans", params: "Parameters" };
+  const TAB_LABELS = { schedule: "Schedule Grid", conflicts: "Conflicts & Resolutions", teachers: "Teachers & Load", math: "Math Roster", reports: "Report Generator", plans: "Plans", params: "Parameters" };
 
   const tById = useMemo(() => Object.fromEntries(teachers.map((x) => [x.id, x])), [teachers]);
   const tName = (id) => (id ? tById[id]?.name || id : "—");
@@ -1046,6 +1050,8 @@ export default function App() {
     setGapOv(plan.gapOv || {});
     setParams({ ...DEFAULT_PARAMS, ...(plan.params || {}) });
     setDismissed(plan.dismissed || []);
+    const roster = mathRosterForPlan(plan);
+    setMathRoster(syncMathRosterFromMaster(plan.blocks || [], plan.teachers || [], roster));
     setPlanName(plan.name || "Untitled Plan");
     setCurrentPlanId(plan.id);
     setEditId(null);
@@ -1061,7 +1067,7 @@ export default function App() {
         : "Save with no schedule blocks?";
       if (!confirm(msg)) return;
     }
-    const snapshot = { blocks, teachers, rooms: planRooms, extraGaps, deletedGaps, gapOv, params, dismissed, name: planName || "Untitled Plan", updatedAt: new Date().toISOString() };
+    const snapshot = { blocks, teachers, rooms: planRooms, mathRoster, extraGaps, deletedGaps, gapOv, params, dismissed, name: planName || "Untitled Plan", updatedAt: new Date().toISOString() };
     let id = currentPlanId;
     let updated;
     if (currentPlanId && plans.some((p) => p.id === currentPlanId)) {
@@ -1085,7 +1091,7 @@ export default function App() {
   const createPlan = async () => {
     const name = newPlanName.trim() || "New Plan";
     const id = `plan-${Date.now()}`;
-    const newPlan = { id, name, blocks: [], teachers: SEED_TEACHERS.slice(), rooms: DEFAULT_ROOMS.slice().sort(), extraGaps: {}, deletedGaps: [], gapOv: {}, params: { ...DEFAULT_PARAMS }, dismissed: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const newPlan = { id, name, blocks: [], teachers: SEED_TEACHERS.slice(), rooms: DEFAULT_ROOMS.slice().sort(), mathRoster: defaultMathRoster(), extraGaps: {}, deletedGaps: [], gapOv: {}, params: { ...DEFAULT_PARAMS }, dismissed: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     try {
       await getStorage().upsertPlan(newPlan);
       const updated = [...plans, newPlan];
@@ -1111,6 +1117,7 @@ export default function App() {
       blocks: (source.blocks || []).map((b) => ({ ...b })),
       teachers: (source.teachers || []).map((t) => ({ ...t })),
       rooms: (source.rooms || resolvePlanRooms(source)).slice(),
+      mathRoster: normalizeMathRoster(source.mathRoster || defaultMathRoster()),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -1310,6 +1317,42 @@ export default function App() {
     pushHistory("Delete room", "params");
     setPlanRooms((rs) => rs.filter((x) => x !== r));
     flash(`Room "${r}" removed`);
+    ensurePlanExists();
+  };
+
+  const mathSummary = useMemo(() => mathRosterSummary(mathRoster), [mathRoster]);
+  const mathTeachersForSections = useMemo(() => teachers.filter((t) => !t.virtual && (t.subjects || []).includes("Math")), [teachers]);
+
+  const runMathSyncFromMaster = () => {
+    pushHistory("Sync math from master", "math");
+    setMathRoster(syncMathRosterFromMaster(blocks, teachers, mathRoster));
+    flash("Math roster synced from master schedule");
+    ensurePlanExists();
+  };
+
+  const pushMathToMaster = () => {
+    pushHistory("Push math to master", "math");
+    setBlocks(syncMasterFromMathRoster(blocks, mathRoster));
+    flash("Master schedule updated from math sections");
+    ensurePlanExists();
+  };
+
+  const updateMathSection = (sectionId, patch) => {
+    pushHistory("Edit math section", "math");
+    const next = applyMathSectionPatch(mathRoster, sectionId, patch, teachers);
+    setMathRoster(next);
+    setBlocks(syncMasterFromMathRoster(blocks, next));
+    ensurePlanExists();
+  };
+
+  const updateMathStudent = (studentId, patch) => {
+    pushHistory("Edit math student", "math");
+    setMathRoster((r) => {
+      const nr = normalizeMathRoster(r);
+      nr.students = nr.students.map((s) => (s.id === studentId ? Object.assign({}, s, patch) : s));
+      nr.sections = rebuildMathSections(nr.students);
+      return nr;
+    });
     ensurePlanExists();
   };
 
@@ -1609,7 +1652,7 @@ export default function App() {
       <main className="max-w-7xl mx-auto px-6 py-6">
         {/* Tabs */}
         <div className="flex gap-1 flex-wrap mb-5" style={{ borderBottom: "1px solid #dbe4f0" }}>
-          {[["schedule", "Schedule Grid"], ["conflicts", `Conflicts & Resolutions${activeConflicts.length ? ` (${activeConflicts.length})` : ""}`], ["teachers", "Teachers & Load"], ["reports", "Report Generator"], ["plans", "Plans"], ["params", "Parameters ƒ"]].map(([k, lbl]) => (
+          {[["schedule", "Schedule Grid"], ["conflicts", `Conflicts & Resolutions${activeConflicts.length ? ` (${activeConflicts.length})` : ""}`], ["teachers", "Teachers & Load"], ["math", `Math Roster (${mathSummary.totalStudents})`], ["reports", "Report Generator"], ["plans", "Plans"], ["params", "Parameters ƒ"]].map(([k, lbl]) => (
             <button key={k} onClick={() => setTab(k)} className={`ns-tab${tab === k ? " ns-on" : ""}`}>
               {lbl}
             </button>
@@ -2046,6 +2089,128 @@ export default function App() {
         )}
 
 
+        {/* ---------- MATH ROSTER ---------- */}
+        {tab === "math" && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3 pb-3 border-b border-gray-200">
+              <h2 className="text-sm font-semibold flex-1">Math Roster — Consolidated Placements</h2>
+              <button onClick={runMathSyncFromMaster} className="ns-act text-xs">↻ Sync from master</button>
+              <button onClick={pushMathToMaster} className="text-xs px-2 py-1 rounded border border-blue-300 text-blue-900 hover:bg-blue-50">↑ Push to master</button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <div className="bg-gray-50 border border-gray-200 rounded p-3"><div className="text-gray-500">Students</div><div className="text-lg font-semibold">{mathSummary.totalStudents}</div></div>
+              <div className="bg-gray-50 border border-gray-200 rounded p-3"><div className="text-gray-500">Sections</div><div className="text-lg font-semibold">{mathSummary.sectionCount}</div></div>
+              <div className="bg-green-50 border border-green-200 rounded p-3"><div className="text-green-800">Placed</div><div className="text-lg font-semibold text-green-900">{mathSummary.placed}</div></div>
+              <div className="bg-amber-50 border border-amber-200 rounded p-3"><div className="text-amber-800">To place / unplaced</div><div className="text-lg font-semibold text-amber-900">{mathSummary.unplaced}</div></div>
+            </div>
+            <p className="text-xs text-gray-500">
+              Synced with master schedule math blocks (cross-band US sections + Math subject blocks). Edit section teacher/room here to update linked master blocks. Student status and notes are saved with the plan.
+              {mathRoster.lastSyncedAt && <> Last sync: {new Date(mathRoster.lastSyncedAt).toLocaleString()}.</>}
+            </p>
+
+            <fieldset className="border border-gray-200 rounded p-3">
+              <legend className="text-xs font-semibold text-gray-600 px-1">Class sections (course · room · teacher)</legend>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200 text-left text-gray-600 bg-gray-50">
+                      <th className="py-2 px-2">Course</th>
+                      <th className="py-2 px-2">Book</th>
+                      <th className="py-2 px-2">Room</th>
+                      <th className="py-2 px-2">Teacher</th>
+                      <th className="py-2 px-2">Students</th>
+                      <th className="py-2 px-2">Master</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mathRoster.sections.map((sec) => (
+                      <tr key={sec.id} className="border-b border-gray-100">
+                        <td className="py-2 px-2 font-medium">{sec.course}</td>
+                        <td className="py-2 px-2 text-gray-600">{sec.bookEdition || "—"}</td>
+                        <td className="py-2 px-2">
+                          <select value={sec.room || ""} onChange={(e) => updateMathSection(sec.id, { room: e.target.value })}
+                            className="border border-gray-300 rounded px-1 py-0.5 bg-white w-full max-w-[6rem]">
+                            <option value="">—</option>
+                            {planRooms.map((r) => <option key={r} value={r}>{r}</option>)}
+                          </select>
+                        </td>
+                        <td className="py-2 px-2">
+                          <select value={sec.teacherId || ""} onChange={(e) => updateMathSection(sec.id, { teacherId: e.target.value || null })}
+                            className="border border-gray-300 rounded px-1 py-0.5 bg-white w-full max-w-[10rem]">
+                            <option value="">—</option>
+                            {mathTeachersForSections.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                          </select>
+                        </td>
+                        <td className="py-2 px-2 text-center">{sec.studentCount || 0}</td>
+                        <td className="py-2 px-2">
+                          {sec.masterBlockId ? (
+                            <button type="button" onClick={() => { setTab("schedule"); setEditId(sec.masterBlockId); }} className="text-blue-900 underline">Open block</button>
+                          ) : <span className="text-gray-400 italic">LS level</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </fieldset>
+
+            <fieldset className="border border-gray-200 rounded p-3">
+              <legend className="text-xs font-semibold text-gray-600 px-1">Students</legend>
+              <div className="flex flex-wrap gap-2 mb-3">
+                <select value={mathSectionFilter} onChange={(e) => setMathSectionFilter(e.target.value)} className="border border-gray-300 rounded px-2 py-1 text-xs bg-white">
+                  <option value="">All sections</option>
+                  {mathRoster.sections.map((s) => <option key={s.id} value={s.id}>{s.course} · {s.room || "—"} ({s.studentCount})</option>)}
+                </select>
+                <label className="flex items-center gap-1.5 text-xs text-gray-700">
+                  <input type="checkbox" checked={mathShowUnplaced} onChange={(e) => setMathShowUnplaced(e.target.checked)} />
+                  Show to-be-placed only
+                </label>
+              </div>
+              <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead className="sticky top-0 bg-gray-50">
+                    <tr className="border-b border-gray-200 text-left text-gray-600">
+                      <th className="py-2 px-2">Name</th>
+                      <th className="py-2 px-2">Grade</th>
+                      <th className="py-2 px-2">Course</th>
+                      <th className="py-2 px-2">Room</th>
+                      <th className="py-2 px-2">Teacher</th>
+                      <th className="py-2 px-2">Status</th>
+                      <th className="py-2 px-2">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mathRoster.students
+                      .filter((s) => {
+                        if (mathShowUnplaced && !s.toBePlaced) return false;
+                        if (!mathSectionFilter) return true;
+                        const sec = mathRoster.sections.find((x) => x.id === mathSectionFilter);
+                        return sec && mathSectionKey(s.course, s.room, s.teacherLabel) === mathSectionKey(sec.course, sec.room, sec.teacherLabel);
+                      })
+                      .map((s) => (
+                        <tr key={s.id} className={`border-b border-gray-100 ${s.toBePlaced ? "bg-amber-50" : ""}`}>
+                          <td className="py-1.5 px-2 whitespace-nowrap">{s.lastName}, {s.firstName}</td>
+                          <td className="py-1.5 px-2">{s.grade}</td>
+                          <td className="py-1.5 px-2">{s.course}</td>
+                          <td className="py-1.5 px-2">{s.room || "—"}</td>
+                          <td className="py-1.5 px-2">{s.teacherLabel || "—"}</td>
+                          <td className="py-1.5 px-2">
+                            <input value={s.status || ""} onChange={(e) => updateMathStudent(s.id, { status: e.target.value })}
+                              className="border border-gray-300 rounded px-1 py-0.5 w-full min-w-[5rem] bg-white" placeholder="Status" />
+                          </td>
+                          <td className="py-1.5 px-2">
+                            <input value={s.notes || ""} onChange={(e) => updateMathStudent(s.id, { notes: e.target.value })}
+                              className="border border-gray-300 rounded px-1 py-0.5 w-full min-w-[8rem] bg-white" placeholder="Notes" />
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </fieldset>
+          </div>
+        )}
+
         {/* ---------- REPORT GENERATOR ---------- */}
         {tab === "reports" && (() => {
           const orient = reportType === "grade" ? "landscape" : "portrait";
@@ -2198,6 +2363,75 @@ export default function App() {
             );
           };
 
+          const mathRosterReport = () => {
+            const sum = mathRosterSummary(mathRoster);
+            return (
+              <div>
+                {reportHeader("Math Roster Summary", "Consolidated placements · AYE 2027")}
+                {SUBJECT_CONTEXT.Math && (
+                  <div style={{ marginTop: 12, fontSize: 10, color: RPT.ink, background: RPT.tile, border: `1px solid ${RPT.line}`, borderLeft: `3px solid ${RPT.gold}`, padding: "8px 10px", lineHeight: 1.45 }}>
+                    {SUBJECT_CONTEXT.Math}
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                  {metaTile("Students", sum.totalStudents)}
+                  {metaTile("Sections", sum.sectionCount)}
+                  {metaTile("Placed", sum.placed)}
+                  {metaTile("To place", sum.unplaced)}
+                </div>
+                {sectionLabel("Sections — Course · Room · Teacher")}
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9.5, marginBottom: 16 }}>
+                  <thead>
+                    <tr>
+                      {["Course", "Book", "Room", "Teacher", "Students", "Division"].map((h) => (
+                        <th key={h} style={{ textAlign: "left", color: RPT.navy, borderBottom: `1.5px solid ${RPT.navy}`, padding: "3px 6px", fontSize: 8.5 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mathRoster.sections.map((sec, i) => (
+                      <tr key={sec.id} style={{ background: i % 2 ? RPT.tile : "white" }}>
+                        <td style={{ padding: "3px 6px", borderBottom: `1px solid ${RPT.line}`, fontWeight: 600 }}>{sec.course}</td>
+                        <td style={{ padding: "3px 6px", borderBottom: `1px solid ${RPT.line}` }}>{sec.bookEdition || "—"}</td>
+                        <td style={{ padding: "3px 6px", borderBottom: `1px solid ${RPT.line}` }}>{sec.room || "—"}</td>
+                        <td style={{ padding: "3px 6px", borderBottom: `1px solid ${RPT.line}` }}>{sec.teacherLabel || "—"}</td>
+                        <td style={{ padding: "3px 6px", borderBottom: `1px solid ${RPT.line}` }}>{sec.studentCount || 0}</td>
+                        <td style={{ padding: "3px 6px", borderBottom: `1px solid ${RPT.line}` }}>{sec.division || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {sectionLabel("Students — Status & notes")}
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 8.5 }}>
+                  <thead>
+                    <tr>
+                      {["Name", "Grade", "Course", "Room", "Teacher", "Status", "Notes"].map((h) => (
+                        <th key={h} style={{ textAlign: "left", color: RPT.navy, borderBottom: `1.5px solid ${RPT.navy}`, padding: "3px 6px", fontSize: 8 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mathRoster.students.slice(0, 120).map((s, i) => (
+                      <tr key={s.id} style={{ background: s.toBePlaced ? "#fffbeb" : i % 2 ? RPT.tile : "white" }}>
+                        <td style={{ padding: "2px 6px", borderBottom: `1px solid ${RPT.line}` }}>{s.lastName}, {s.firstName}</td>
+                        <td style={{ padding: "2px 6px", borderBottom: `1px solid ${RPT.line}` }}>{s.grade}</td>
+                        <td style={{ padding: "2px 6px", borderBottom: `1px solid ${RPT.line}` }}>{s.course}</td>
+                        <td style={{ padding: "2px 6px", borderBottom: `1px solid ${RPT.line}` }}>{s.room || "—"}</td>
+                        <td style={{ padding: "2px 6px", borderBottom: `1px solid ${RPT.line}` }}>{s.teacherLabel || "—"}</td>
+                        <td style={{ padding: "2px 6px", borderBottom: `1px solid ${RPT.line}` }}>{s.status || "—"}</td>
+                        <td style={{ padding: "2px 6px", borderBottom: `1px solid ${RPT.line}`, fontSize: 8 }}>{s.notes || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {mathRoster.students.length > 120 && (
+                  <div style={{ fontSize: 8.5, color: RPT.grey, marginTop: 6 }}>Showing first 120 of {mathRoster.students.length} students — full roster in Math tab.</div>
+                )}
+                {reportFooter(genStamp)}
+              </div>
+            );
+          };
+
           return (
             <div>
               <style>{`
@@ -2216,6 +2450,7 @@ export default function App() {
                     <option value="grade">Grade schedule (landscape)</option>
                     <option value="teacher">Faculty term sheet (portrait)</option>
                     <option value="subject">Subject report (portrait)</option>
+                    <option value="math">Math roster summary (portrait)</option>
                   </select>
                 </div>
                 {reportType === "grade" && (
@@ -2248,7 +2483,7 @@ export default function App() {
                 <button onClick={() => {
                   const el = document.getElementById("print-root");
                   if (!el) return;
-                  const entity = reportType === "grade" ? reportGrade : reportType === "teacher" ? (validation.rows.find((x) => x.id === reportTeacher)?.name || reportTeacher) : reportSubject;
+                  const entity = reportType === "grade" ? reportGrade : reportType === "teacher" ? (validation.rows.find((x) => x.id === reportTeacher)?.name || reportTeacher) : reportType === "math" ? "Math-Roster" : reportSubject;
                   const fname = `NSCS_AYE2027_${reportType}_${String(entity).replace(/[^A-Za-z0-9]+/g, "-")}`;
                   if (typeof window !== "undefined" && window.html2pdf) {
                     window.scrollTo(0, 0);
@@ -2285,6 +2520,7 @@ export default function App() {
                   {reportType === "grade" && gradeReport(reportGrade)}
                   {reportType === "teacher" && teacherReport(reportTeacher)}
                   {reportType === "subject" && subjectReport(reportSubject)}
+                  {reportType === "math" && mathRosterReport()}
                 </div>
               </div>
               <p className="text-xs text-gray-500 mt-3">

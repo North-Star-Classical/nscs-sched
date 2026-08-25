@@ -140,6 +140,7 @@ function planMetaFromRow(row) {
     gapOv: d.gapOv || {},
     params: d.params || {},
     dismissed: d.dismissed || [],
+    mathRoster: d.mathRoster || null,
     createdAt: d.createdAt || row.created_at,
     updatedAt: d.updatedAt || row.updated_at,
   };
@@ -174,6 +175,7 @@ function planToData(plan) {
     gapOv: plan.gapOv || {},
     params: plan.params || {},
     dismissed: plan.dismissed || [],
+    mathRoster: plan.mathRoster || null,
     createdAt: plan.createdAt,
     updatedAt: plan.updatedAt,
   };
