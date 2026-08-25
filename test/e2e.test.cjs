@@ -86,6 +86,8 @@ const storageDump = () => (globalThis.__NSCS_DUMP__ ? globalThis.__NSCS_DUMP__()
   const s1Teachers = (plan.teachers || []).length;
   check('S1: blocks present in saved plan', s1Blocks > 0, `${s1Blocks} blocks`);
   check('S1: 23 teachers in saved plan (21 staff + tbd-theo + various)', s1Teachers === 23, `${s1Teachers} teachers`);
+  const gabTeacher = (plan.teachers || []).find(t => t.id === 'gabrielson');
+  check('ROLES: Gabrielson roles saved in plan', !!(gabTeacher && gabTeacher.roles && gabTeacher.roles.length === 1 && gabTeacher.roles[0].label === 'Math Lead'), gabTeacher && gabTeacher.roles ? JSON.stringify(gabTeacher.roles) : 'missing');
   }
 
   const createBtn = btnByText(doc, /New|Create/i);
@@ -193,7 +195,34 @@ const storageDump = () => (globalThis.__NSCS_DUMP__ ? globalThis.__NSCS_DUMP__()
   check('MATH: section course inputs editable', doc.querySelectorAll('fieldset legend').length > 0 && [...doc.querySelectorAll('table input')].some(i => /ALG|Alg|Geometry|Pre/i.test(i.value || '')));
   check('MATH: students table hidden', !/legend[^>]*>Students</.test(doc.getElementById('root').innerHTML));
   check('HERO: active plan visible', /Active plan:/.test(doc.getElementById('root').innerHTML));
-  check('HERO: app version visible', /App v1\.7\.2/.test(doc.getElementById('root').innerHTML));
+  check('HERO: app version visible', /App v1\.7\.4/.test(doc.getElementById('root').innerHTML));
+
+  // Teacher profile roles (Gabrielson → Math Lead)
+  await act(async () => { btnByText(doc, /Teachers & Load/).click(); await flush(); });
+  check('ROLES: Gabrielson Math Lead in teachers tab', /Gabrielson.*Math Lead|Math Lead \(M\/W\/Th/i.test(doc.getElementById('root').innerHTML));
+  await act(async () => { btnByText(doc, /Report Generator/).click(); await flush(); });
+  const reportTypeSel = doc.querySelector('select');
+  if (reportTypeSel) {
+    await act(async () => {
+      reportTypeSel.value = 'teacher';
+      reportTypeSel.dispatchEvent(new w.Event('change', { bubbles: true }));
+      await flush();
+    });
+  }
+  const teacherSel = [...doc.querySelectorAll('select')].find(s => [...s.options].some(o => o.value === 'gabrielson'));
+  if (teacherSel) {
+    await act(async () => {
+      teacherSel.value = 'gabrielson';
+      teacherSel.dispatchEvent(new w.Event('change', { bubbles: true }));
+      await flush();
+    });
+  }
+  const printRoot = doc.getElementById('print-root');
+  const reportHTML = printRoot ? printRoot.innerHTML : doc.getElementById('root').innerHTML;
+  check('ROLES: faculty report Roles meta tile', /Roles/.test(reportHTML) && /Math Lead/.test(reportHTML));
+  check('ROLES: faculty report annotates Algebra II', /Algebra II · Math Lead/.test(reportHTML));
+  await act(async () => { btnByText(doc, /Schedule Grid/).click(); await flush(); });
+  check('ROLES: schedule grid annotates Algebra II block', /Algebra II · Math Lead/.test(doc.getElementById('root').innerHTML));
 
   console.log('\n════════ FULL VALIDATION RESULTS ════════');
   results.forEach(r => console.log(r));

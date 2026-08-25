@@ -57,6 +57,7 @@ function rebuildMathSections(students) {
         teacherId: s.teacherId || null,
         division: s.division || "",
         masterBlockId: null,
+        tuesdayBlockId: null,
         studentCount: 0,
       };
     }
@@ -85,6 +86,7 @@ function rebuildMathSectionsPreserve(students, prevSections, preferSectionId) {
     if (prev) {
       s.id = prev.id;
       s.masterBlockId = prev.masterBlockId;
+      s.tuesdayBlockId = prev.tuesdayBlockId;
     }
   });
   (students || []).forEach(function (stu) {
@@ -172,6 +174,40 @@ function uniqueBlocks(list) {
   });
 }
 
+function sectionBandHint(sec) {
+  var c = (sec.course || "").toLowerCase();
+  var d = (sec.division || "").toLowerCase();
+  if (/pre-calc|alg 2 us|^alg 2/.test(c)) return "11th/12th";
+  if (/geometry|alg 1 us|alg 1 ls|jacobs/.test(c)) return "9th/10th";
+  if (/saxon 8|8\/7|8 7/.test(c)) return "7th/8th";
+  if (/saxon 7|7\/6|7 6/.test(c)) return "5th/6th";
+  if (/saxon 5|5\/4|math 6\/5|6\/5/.test(c)) return "3rd/4th";
+  if (/mammoth 4|mammoth 3/.test(c)) return "3rd/4th";
+  if (/mammoth 2/.test(c)) return "2nd";
+  if (/mammoth 1|mammoth k/.test(c)) return "1st";
+  if (d.indexOf("upper") >= 0) return "9th/10th";
+  if (d.indexOf("logic") >= 0) return "7th/8th";
+  return null;
+}
+
+/** Tuesday "Math (by level)" window for upper/logic bands — shared block, used for report timing. */
+function tuesdayMathBlockForSection(blocks, sec) {
+  var band = sectionBandHint(sec);
+  if (!band) return null;
+  if (sec.tuesdayBlockId) {
+    var pinned = (blocks || []).find(function (b) { return b.id === sec.tuesdayBlockId; });
+    if (pinned) return pinned;
+  }
+  return (blocks || []).find(function (b) {
+    return b.mathBlock && b.subject === "Math" && b.band === band
+      && b.days && b.days.indexOf("T") >= 0 && blockHasScheduleTime(b);
+  }) || null;
+}
+
+function isSharedTuesdayMathBlock(b) {
+  return !!(b && b.mathBlock && b.days && b.days.indexOf("T") >= 0 && b.teacher === "various");
+}
+
 function findBlocksForMathSection(blocks, sec) {
   var out = [];
   if (sec.masterBlockId) {
@@ -196,12 +232,25 @@ function linkMathRosterSections(blocks, roster) {
   r.sections.forEach(function (sec) {
     var matches = findBlocksForMathSection(blocks, sec);
     if (matches.length) sec.masterBlockId = matches[0].id;
+    var tue = tuesdayMathBlockForSection(blocks, sec);
+    sec.tuesdayBlockId = tue ? tue.id : null;
   });
   return r;
 }
 
-function mathTemplateBlockForSection(blocks, sec) {
+function mathTemplateBlockForSection(blocks, sec, day) {
+  if (day === "T") {
+    var tue = tuesdayMathBlockForSection(blocks, sec);
+    if (tue) return tue;
+    return null;
+  }
   var matches = findBlocksForMathSection(blocks, sec);
+  if (day) {
+    var onDay = matches.find(function (b) {
+      return blockHasScheduleTime(b) && b.days && b.days.indexOf(day) >= 0;
+    });
+    if (onDay) return onDay;
+  }
   var timed = matches.find(blockHasScheduleTime);
   if (timed) return timed;
   var upper = /upper school|alg|geometry|pre-calc/i.test((sec.division || "") + " " + (sec.course || ""));
@@ -271,7 +320,7 @@ function mathRosterRowsForTeacherDay(tid, day, roster, blocks, existingBlockIds)
     var linked = sec.masterBlockId ? (blocks || []).find(function (b) { return b.id === sec.masterBlockId; }) : null;
     if (linked && linked.teacher === tid && seen[linked.id]) return;
     if (linked && linked.teacher === tid && blockHasScheduleTime(linked) && linked.days && linked.days.indexOf(day) >= 0) return;
-    var tpl = mathTemplateBlockForSection(blocks, sec);
+    var tpl = mathTemplateBlockForSection(blocks, sec, day);
     if (!tpl || !tpl.days || tpl.days.indexOf(day) < 0 || !blockHasScheduleTime(tpl)) return;
     var label = sec.course + (sec.bookEdition ? " · " + sec.bookEdition : "");
     rows.push({
@@ -337,6 +386,7 @@ function syncMasterFromMathRoster(blocks, roster) {
     matches.forEach(function (block) {
       var idx = updated.findIndex(function (b) { return b.id === block.id; });
       if (idx < 0) return;
+      if (isSharedTuesdayMathBlock(updated[idx])) return;
       var patch = {};
       if (sec.teacherId) patch.teacher = sec.teacherId;
       if (sec.room) patch.room = sec.room;

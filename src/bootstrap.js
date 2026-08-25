@@ -40,7 +40,7 @@ var BLOCK_ROW_KEYS = {
 
 var TEACHER_ROW_KEYS = {
   id: 1, name: 1, rate: 1, flat: 1, status: 1, subjects: 1,
-  allowedDays: 1, windows: 1, maxClasses: 1, virtual: 1, note: 1,
+  allowedDays: 1, windows: 1, maxClasses: 1, virtual: 1, note: 1, roles: 1,
 };
 
 function blockFromRow(r) {
@@ -109,6 +109,7 @@ function teacherFromRow(r) {
   if (r.max_classes != null) t.maxClasses = r.max_classes;
   if (r.virtual) t.virtual = true;
   if (r.note) t.note = r.note;
+  if (r.roles && r.roles.length) t.roles = r.roles;
   return t;
 }
 
@@ -126,6 +127,7 @@ function teacherToRow(planId, t, sortOrder) {
     max_classes: t.maxClasses != null ? t.maxClasses : null,
     virtual: !!t.virtual,
     note: t.note || null,
+    roles: t.roles && t.roles.length ? t.roles : [],
     sort_order: sortOrder,
   };
 }
