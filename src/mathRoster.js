@@ -116,11 +116,176 @@ function matchBlockToSection(block, section) {
   var sc = (section.course || "").toLowerCase();
   if (!bc || !sc) return false;
   if (bc === sc) return true;
+  if (courseFuzzyMatch(bc, sc)) return true;
   if (sc.indexOf("alg 2") >= 0 && bc.indexOf("algebra ii") >= 0) return true;
   if (sc.indexOf("alg 1") >= 0 && bc.indexOf("algebra i") >= 0) return true;
   if (sc.indexOf("geometry") >= 0 && bc.indexOf("geometry") >= 0) return true;
   if (sc.indexOf("pre-calc") >= 0 && bc.indexOf("pre") >= 0) return true;
   return false;
+}
+
+function normCourse(s) {
+  return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function courseFuzzyMatch(a, b) {
+  var na = normCourse(a);
+  var nb = normCourse(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  if (na.indexOf(nb) >= 0 || nb.indexOf(na) >= 0) return true;
+  if (na.indexOf("alg 2") >= 0 && nb.indexOf("algebra ii") >= 0) return true;
+  if (nb.indexOf("alg 2") >= 0 && na.indexOf("algebra ii") >= 0) return true;
+  if (na.indexOf("mammoth") >= 0 && nb.indexOf("mammoth") >= 0) return true;
+  if (na.indexOf("saxon") >= 0 && nb.indexOf("saxon") >= 0) return true;
+  if (na.indexOf("geometry") >= 0 && nb.indexOf("geometry") >= 0) return true;
+  if (na.indexOf("pre calc") >= 0 && nb.indexOf("pre") >= 0) return true;
+  return false;
+}
+
+function rosterCourseToBlockCourse(secCourse) {
+  var c = String(secCourse || "");
+  if (/^ALG 2 US/i.test(c)) return "Algebra II";
+  if (/^Alg 1 LS/i.test(c)) return "Algebra I";
+  if (/^Alg 1 US/i.test(c)) return "US Algebra I";
+  if (/^Geometry$/i.test(c)) return "Geometry";
+  if (/^Pre-Calc/i.test(c)) return "Pre-Calculus";
+  var mammoth = c.match(/Mammoth\s*(\d|[Kk])/i);
+  if (mammoth) return "Math (Mammoth " + mammoth[1].toUpperCase() + ")";
+  var saxon = c.match(/Saxon\s*([\d/]+)/i);
+  if (saxon) return "Math (Saxon " + saxon[1] + ")";
+  var math65 = c.match(/Math\s*6\/5/i);
+  if (math65) return "Math (6/5)";
+  return c;
+}
+
+function blockHasScheduleTime(b) {
+  return !!(b && typeof b.start === "number" && typeof b.end === "number" && b.end > b.start);
+}
+
+function uniqueBlocks(list) {
+  var seen = {};
+  return (list || []).filter(function (b) {
+    if (!b || seen[b.id]) return false;
+    seen[b.id] = true;
+    return true;
+  });
+}
+
+function findBlocksForMathSection(blocks, sec) {
+  var out = [];
+  if (sec.masterBlockId) {
+    var pinned = (blocks || []).find(function (b) { return b.id === sec.masterBlockId; });
+    if (pinned) out.push(pinned);
+  }
+  (blocks || []).filter(isMathMasterBlock).forEach(function (b) {
+    if (matchBlockToSection(b, sec)) out.push(b);
+  });
+  if (sec.teacherId) {
+    (blocks || []).filter(function (b) {
+      return !b.staff && b.subject === "Math" && (b.teacher === sec.teacherId || b.teacher2 === sec.teacherId);
+    }).forEach(function (b) {
+      if (courseFuzzyMatch(b.course, sec.course) || courseFuzzyMatch(blockCourseLabel(b), sec.course)) out.push(b);
+    });
+  }
+  return uniqueBlocks(out);
+}
+
+function linkMathRosterSections(blocks, roster) {
+  var r = normalizeMathRoster(roster);
+  r.sections.forEach(function (sec) {
+    var matches = findBlocksForMathSection(blocks, sec);
+    if (matches.length) sec.masterBlockId = matches[0].id;
+  });
+  return r;
+}
+
+function mathTemplateBlockForSection(blocks, sec) {
+  var matches = findBlocksForMathSection(blocks, sec);
+  var timed = matches.find(blockHasScheduleTime);
+  if (timed) return timed;
+  var upper = /upper school|alg|geometry|pre-calc/i.test((sec.division || "") + " " + (sec.course || ""));
+  var tpl = (blocks || []).find(function (b) {
+    return blockHasScheduleTime(b) && b.subject === "Math" && (upper ? b.crossBand : (b.mathBlock || !b.crossBand));
+  });
+  return tpl || (blocks || []).find(function (b) { return blockHasScheduleTime(b) && b.subject === "Math"; });
+}
+
+function mathTeacherLabel(id) {
+  return MATH_TEACHER_LABELS[id] || id;
+}
+
+/** Teachers for math roster dropdowns — includes roster-only math instructors. */
+function mergeTeachersForMathRoster(teachers, roster) {
+  var byId = {};
+  (teachers || []).filter(function (t) { return !t.virtual; }).forEach(function (t) {
+    if ((t.subjects || []).indexOf("Math") >= 0) byId[t.id] = t;
+  });
+  normalizeMathRoster(roster).sections.forEach(function (sec) {
+    if (!sec.teacherId) return;
+    var existing = (teachers || []).find(function (t) { return t.id === sec.teacherId; });
+    byId[sec.teacherId] = existing || {
+      id: sec.teacherId,
+      name: sec.teacherLabel || mathTeacherLabel(sec.teacherId),
+      subjects: ["Math"],
+      status: "RPT",
+      mathRosterOnly: true,
+    };
+  });
+  return Object.values(byId).sort(function (a, b) { return (a.name || "").localeCompare(b.name || ""); });
+}
+
+/** Faculty report teacher list — anyone with blocks or math roster sections. */
+function reportTeacherOptions(validationRows, teachers, roster) {
+  var byId = {};
+  (validationRows || []).forEach(function (r) { byId[r.id] = Object.assign({}, r); });
+  mergeTeachersForMathRoster(teachers, roster).forEach(function (t) {
+    if (byId[t.id]) return;
+    byId[t.id] = {
+      id: t.id,
+      name: t.name,
+      status: t.status || "—",
+      subjects: t.subjects || ["Math"],
+      blocks: 0,
+      teachHrs: 0,
+      planBudgetHrs: 0,
+      planActualHrs: 0,
+      totalActualHrs: 0,
+    };
+  });
+  var rosterTeacherIds = {};
+  normalizeMathRoster(roster).sections.forEach(function (s) {
+    if (s.teacherId) rosterTeacherIds[s.teacherId] = true;
+  });
+  return Object.values(byId).filter(function (r) {
+    return r.blocks > 0 || rosterTeacherIds[r.id];
+  }).sort(function (a, b) { return (a.name || "").localeCompare(b.name || ""); });
+}
+
+/** Extra faculty-report rows from math roster sections not already on the master grid. */
+function mathRosterRowsForTeacherDay(tid, day, roster, blocks, existingBlockIds) {
+  var seen = existingBlockIds || {};
+  var rows = [];
+  normalizeMathRoster(roster).sections.forEach(function (sec) {
+    if (sec.teacherId !== tid) return;
+    var linked = sec.masterBlockId ? (blocks || []).find(function (b) { return b.id === sec.masterBlockId; }) : null;
+    if (linked && linked.teacher === tid && seen[linked.id]) return;
+    if (linked && linked.teacher === tid && blockHasScheduleTime(linked) && linked.days && linked.days.indexOf(day) >= 0) return;
+    var tpl = mathTemplateBlockForSection(blocks, sec);
+    if (!tpl || !tpl.days || tpl.days.indexOf(day) < 0 || !blockHasScheduleTime(tpl)) return;
+    var label = sec.course + (sec.bookEdition ? " · " + sec.bookEdition : "");
+    rows.push({
+      id: "math-roster-" + sec.id + "-" + day,
+      course: label,
+      start: tpl.start,
+      end: tpl.end,
+      room: sec.room || tpl.room || "",
+      synthetic: false,
+      fromMathRoster: true,
+      days: tpl.days,
+    });
+  });
+  return rows;
 }
 
 /** Pull teacher/room/course from cross-band math blocks into roster sections. */
@@ -156,23 +321,28 @@ function syncMathRosterFromMaster(blocks, teachers, roster) {
     }
   });
 
+  r = linkMathRosterSections(blocks, r);
   r.lastSyncedAt = new Date().toISOString();
   return r;
 }
 
-/** Push section teacher/room changes to linked master math blocks. Returns updated blocks array. */
+/** Push section teacher/room/course changes to all linked master math blocks. Returns updated blocks array. */
 function syncMasterFromMathRoster(blocks, roster) {
   var r = normalizeMathRoster(roster);
   var updated = (blocks || []).map(function (b) { return Object.assign({}, b); });
   r.sections.forEach(function (sec) {
-    if (!sec.masterBlockId) return;
-    var idx = updated.findIndex(function (b) { return b.id === sec.masterBlockId; });
-    if (idx < 0) return;
-    var patch = {};
-    if (sec.teacherId) patch.teacher = sec.teacherId;
-    if (sec.room) patch.room = sec.room;
-    if (sec.course && updated[idx].crossBand) patch.course = sec.course.replace(/^ALG 2 US/i, "Algebra II").replace(/^Alg 1 LS/i, "Algebra I");
-    updated[idx] = Object.assign({}, updated[idx], patch);
+    var matches = findBlocksForMathSection(updated, sec);
+    if (!matches.length) return;
+    var blockCourse = rosterCourseToBlockCourse(sec.course);
+    matches.forEach(function (block) {
+      var idx = updated.findIndex(function (b) { return b.id === block.id; });
+      if (idx < 0) return;
+      var patch = {};
+      if (sec.teacherId) patch.teacher = sec.teacherId;
+      if (sec.room) patch.room = sec.room;
+      if (blockCourse) patch.course = blockCourse;
+      updated[idx] = Object.assign({}, updated[idx], patch);
+    });
   });
   return updated;
 }
@@ -186,6 +356,7 @@ function applyMathSectionPatch(roster, sectionId, patch, teachers) {
   var oldKey = mathSectionKey(sec.course, sec.room, sec.teacherLabel);
   Object.assign(sec, patch);
   if (patch.teacherId && tById[patch.teacherId]) sec.teacherLabel = tById[patch.teacherId].name;
+  else if (patch.teacherId) sec.teacherLabel = mathTeacherLabel(patch.teacherId);
   r.students.forEach(function (stu) {
     if (stu.sectionKey === oldKey || stu.sectionId === sectionId) {
       if (patch.course != null) stu.course = patch.course;

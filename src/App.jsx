@@ -391,8 +391,6 @@ export default function App() {
   const [showPlansList, setShowPlansList] = useState(false);
   const [planRooms, setPlanRooms] = useState(() => DEFAULT_ROOMS.slice().sort());
   const [mathRoster, setMathRoster] = useState(() => defaultMathRoster());
-  const [mathSectionFilter, setMathSectionFilter] = useState("");
-  const [mathShowUnplaced, setMathShowUnplaced] = useState(false);
   const [newRoomInput, setNewRoomInput] = useState("");   // tid -> [{id,label,days,start,end}]
   const [deletedGaps, setDeletedGaps] = useState([]); // gapKeyFor() strings removed by the user
   const [showDismissed, setShowDismissed] = useState(false);
@@ -1323,7 +1321,8 @@ export default function App() {
   };
 
   const mathSummary = useMemo(() => mathRosterSummary(mathRoster), [mathRoster]);
-  const mathTeachersForSections = useMemo(() => teachers.filter((t) => !t.virtual && (t.subjects || []).includes("Math")), [teachers]);
+  const mathTeachersForSections = useMemo(() => mergeTeachersForMathRoster(teachers, mathRoster), [teachers, mathRoster]);
+  const reportTeacherOpts = useMemo(() => reportTeacherOptions(validation.rows, teachers, mathRoster), [validation.rows, teachers, mathRoster]);
   const activePlanMeta = useMemo(() => {
     const p = plans.find((x) => x.id === currentPlanId);
     return {
@@ -1349,16 +1348,10 @@ export default function App() {
 
   const updateMathSection = (sectionId, patch) => {
     pushHistory("Edit math section", "math");
-    const next = applyMathSectionPatch(mathRoster, sectionId, patch, teachers);
+    const rosterTeachers = mergeTeachersForMathRoster(teachers, mathRoster);
+    const next = applyMathSectionPatch(mathRoster, sectionId, patch, rosterTeachers);
     setMathRoster(next);
     setBlocks(syncMasterFromMathRoster(blocks, next));
-    ensurePlanExists();
-  };
-
-  const updateMathStudent = (studentId, patch) => {
-    pushHistory("Edit math student", "math");
-    const next = applyMathStudentPatch(mathRoster, studentId, patch, teachers);
-    setMathRoster(next);
     ensurePlanExists();
   };
 
@@ -2115,7 +2108,7 @@ export default function App() {
               <div className="bg-amber-50 border border-amber-200 rounded p-3"><div className="text-amber-800">To place / unplaced</div><div className="text-lg font-semibold text-amber-900">{mathSummary.unplaced}</div></div>
             </div>
             <p className="text-xs text-gray-500">
-              Synced with master schedule math blocks (cross-band US sections + Math subject blocks). Edit sections and students here; use Push to master to write section teacher/room/course to linked blocks. All edits are saved with the plan.
+              Edits here update linked master schedule math blocks automatically (teacher, room, course). Consolidated sections without a grid block still appear on faculty reports. Student placements remain saved with the plan but are hidden for now.
               {mathRoster.lastSyncedAt && <> Last sync: {new Date(mathRoster.lastSyncedAt).toLocaleString()}.</>}
             </p>
 
@@ -2170,102 +2163,13 @@ export default function App() {
                 </table>
               </div>
             </fieldset>
-
-            <fieldset className="border border-gray-200 rounded p-3">
-              <legend className="text-xs font-semibold text-gray-600 px-1">Students</legend>
-              <div className="flex flex-wrap gap-2 mb-3">
-                <select value={mathSectionFilter} onChange={(e) => setMathSectionFilter(e.target.value)} className="border border-gray-300 rounded px-2 py-1 text-xs bg-white">
-                  <option value="">All sections</option>
-                  {mathRoster.sections.map((s) => <option key={s.id} value={s.id}>{s.course} · {s.room || "—"} ({s.studentCount})</option>)}
-                </select>
-                <label className="flex items-center gap-1.5 text-xs text-gray-700">
-                  <input type="checkbox" checked={mathShowUnplaced} onChange={(e) => setMathShowUnplaced(e.target.checked)} />
-                  Show to-be-placed only
-                </label>
-              </div>
-              <div className="overflow-x-auto max-h-96 overflow-y-auto">
-                <table className="w-full text-xs border-collapse">
-                  <thead className="sticky top-0 bg-gray-50">
-                    <tr className="border-b border-gray-200 text-left text-gray-600">
-                      <th className="py-2 px-2">Last</th>
-                      <th className="py-2 px-2">First</th>
-                      <th className="py-2 px-2">Grade</th>
-                      <th className="py-2 px-2">Course</th>
-                      <th className="py-2 px-2">Room</th>
-                      <th className="py-2 px-2">Teacher</th>
-                      <th className="py-2 px-2">To place</th>
-                      <th className="py-2 px-2">Status</th>
-                      <th className="py-2 px-2">Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mathRoster.students
-                      .filter((s) => {
-                        if (mathShowUnplaced && !s.toBePlaced) return false;
-                        if (!mathSectionFilter) return true;
-                        const sec = mathRoster.sections.find((x) => x.id === mathSectionFilter);
-                        return sec && mathSectionKey(s.course, s.room, s.teacherLabel) === mathSectionKey(sec.course, sec.room, sec.teacherLabel);
-                      })
-                      .map((s) => (
-                        <tr key={s.id} className={`border-b border-gray-100 ${s.toBePlaced ? "bg-amber-50" : ""}`}>
-                          <td className="py-1.5 px-2">
-                            <input value={s.lastName || ""} onChange={(e) => updateMathStudent(s.id, { lastName: e.target.value })}
-                              className="border border-gray-300 rounded px-1 py-0.5 w-full min-w-[4.5rem] bg-white" />
-                          </td>
-                          <td className="py-1.5 px-2">
-                            <input value={s.firstName || ""} onChange={(e) => updateMathStudent(s.id, { firstName: e.target.value })}
-                              className="border border-gray-300 rounded px-1 py-0.5 w-full min-w-[4.5rem] bg-white" />
-                          </td>
-                          <td className="py-1.5 px-2">
-                            <select value={s.grade || ""} onChange={(e) => updateMathStudent(s.id, { grade: e.target.value })}
-                              className="border border-gray-300 rounded px-1 py-0.5 bg-white w-full max-w-[3.5rem]">
-                              <option value="">—</option>
-                              {GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
-                            </select>
-                          </td>
-                          <td className="py-1.5 px-2">
-                            <input value={s.course || ""} onChange={(e) => updateMathStudent(s.id, { course: e.target.value })}
-                              className="border border-gray-300 rounded px-1 py-0.5 w-full min-w-[6rem] bg-white" />
-                          </td>
-                          <td className="py-1.5 px-2">
-                            <select value={s.room || ""} onChange={(e) => updateMathStudent(s.id, { room: e.target.value })}
-                              className="border border-gray-300 rounded px-1 py-0.5 bg-white w-full max-w-[5rem]">
-                              <option value="">—</option>
-                              {planRooms.map((r) => <option key={r} value={r}>{r}</option>)}
-                            </select>
-                          </td>
-                          <td className="py-1.5 px-2">
-                            <select value={s.teacherId || ""} onChange={(e) => updateMathStudent(s.id, { teacherId: e.target.value || null })}
-                              className="border border-gray-300 rounded px-1 py-0.5 bg-white w-full max-w-[8rem]">
-                              <option value="">{s.teacherLabel || "—"}</option>
-                              {mathTeachersForSections.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                            </select>
-                          </td>
-                          <td className="py-1.5 px-2 text-center">
-                            <input type="checkbox" checked={!!s.toBePlaced} onChange={(e) => updateMathStudent(s.id, { toBePlaced: e.target.checked })}
-                              title="Mark as to-be-placed" />
-                          </td>
-                          <td className="py-1.5 px-2">
-                            <input value={s.status || ""} onChange={(e) => updateMathStudent(s.id, { status: e.target.value })}
-                              className="border border-gray-300 rounded px-1 py-0.5 w-full min-w-[5rem] bg-white" placeholder="Status" />
-                          </td>
-                          <td className="py-1.5 px-2">
-                            <input value={s.notes || ""} onChange={(e) => updateMathStudent(s.id, { notes: e.target.value })}
-                              className="border border-gray-300 rounded px-1 py-0.5 w-full min-w-[8rem] bg-white" placeholder="Notes" />
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            </fieldset>
           </div>
         )}
 
         {/* ---------- REPORT GENERATOR ---------- */}
         {tab === "reports" && (() => {
           const orient = reportType === "grade" ? "landscape" : "portrait";
-          const teacherOpts = validation.rows.filter((r) => r.blocks > 0);
+          const teacherOpts = reportTeacherOpts;
           const subjectOpts = [...new Set(blocks.filter((b) => !b.staff && !["Lunch", "Break"].includes(b.subject)).map((b) => b.subject))].sort();
           const genStamp = "Generated " + new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) + " · Schedule Planner V1 draft";
           const cleanStamp = "Generated " + new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -2316,13 +2220,16 @@ export default function App() {
 
           // ---- teacher report ----
           const teacherReport = (tid) => {
-            const r = validation.rows.find((x) => x.id === tid) || validation.rows[0];
+            const r = reportTeacherOpts.find((x) => x.id === tid) || validation.rows.find((x) => x.id === tid) || reportTeacherOpts[0];
             const facBuf = facilityBufferMinsForTeacher(r.id);
             const facNote = `${facBuf.setupMin} min setup + ${facBuf.teardownMin} min teardown omitted from PDF rows and hour totals (room prep buffer)`;
-            const byDay = DAYS.map((d) => ({
-              d,
-              list: buildTeacherDay(r.id, d).filter((row) => !isFacilityPdfRow(row)),
-            }));
+            const byDay = DAYS.map((d) => {
+              const base = buildTeacherDay(r.id, d).filter((row) => !isFacilityPdfRow(row));
+              const existingIds = Object.fromEntries(base.filter((b) => !b.gap && !b.synthetic).map((b) => [b.id, true]));
+              const rosterRows = mathRosterRowsForTeacherDay(r.id, d, mathRoster, blocks, existingIds);
+              const list = [...base, ...rosterRows].sort((a, b) => a.start - b.start);
+              return { d, list };
+            });
             return (
               <div>
                 {reportHeader(`Faculty Schedule — ${r.name}`, `AYE 2027`)}
@@ -2534,7 +2441,7 @@ export default function App() {
                 <button onClick={() => {
                   const el = document.getElementById("print-root");
                   if (!el) return;
-                  const entity = reportType === "grade" ? reportGrade : reportType === "teacher" ? (validation.rows.find((x) => x.id === reportTeacher)?.name || reportTeacher) : reportType === "math" ? "Math-Roster" : reportSubject;
+                  const entity = reportType === "grade" ? reportGrade : reportType === "teacher" ? (reportTeacherOpts.find((x) => x.id === reportTeacher)?.name || reportTeacher) : reportType === "math" ? "Math-Roster" : reportSubject;
                   const fname = `NSCS_AYE2027_${reportType}_${String(entity).replace(/[^A-Za-z0-9]+/g, "-")}`;
                   if (typeof window !== "undefined" && window.html2pdf) {
                     window.scrollTo(0, 0);
