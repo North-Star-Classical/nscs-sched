@@ -190,6 +190,10 @@ const storageDump = () => (globalThis.__NSCS_DUMP__ ? globalThis.__NSCS_DUMP__()
   await act(async () => { btnByText(doc, /Math Roster/).click(); await flush(); });
   check('MATH: roster tab renders sections table', /Class sections \(course · room · teacher\)/.test(doc.getElementById('root').innerHTML));
   check('MATH: roster has student rows', /Consolidated Placements/.test(doc.getElementById('root').innerHTML));
+  check('MATH: section course inputs editable', doc.querySelectorAll('fieldset legend').length > 0 && [...doc.querySelectorAll('table input')].some(i => /ALG|Alg|Geometry|Pre/i.test(i.value || '')));
+  check('MATH: student name inputs editable', [...doc.querySelectorAll('table input')].filter(i => i.placeholder !== 'Status' && i.placeholder !== 'Notes' && i.placeholder !== 'Book').length >= 2);
+  check('HERO: active plan visible', /Active plan:/.test(doc.getElementById('root').innerHTML));
+  check('HERO: app version visible', /App v1\.7\.1/.test(doc.getElementById('root').innerHTML));
 
   console.log('\n════════ FULL VALIDATION RESULTS ════════');
   results.forEach(r => console.log(r));

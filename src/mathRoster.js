@@ -63,10 +63,40 @@ function rebuildMathSections(students) {
     map[key].studentCount++;
     if (!map[key].bookEdition && s.bookEdition) map[key].bookEdition = s.bookEdition;
     if (!map[key].teacherId && s.teacherId) map[key].teacherId = s.teacherId;
+    if (!map[key].division && s.division) map[key].division = s.division;
   });
   return Object.values(map).sort(function (a, b) {
     return a.course.localeCompare(b.course) || (a.room || "").localeCompare(b.room || "");
   });
+}
+
+/** Rebuild sections after edits while preserving ids and masterBlockId where the section key matches. */
+function rebuildMathSectionsPreserve(students, prevSections, preferSectionId) {
+  var prevByKey = {};
+  var prevById = {};
+  (prevSections || []).forEach(function (s) {
+    prevByKey[mathSectionKey(s.course, s.room, s.teacherLabel)] = s;
+    prevById[s.id] = s;
+  });
+  var fresh = rebuildMathSections(students);
+  fresh.forEach(function (s) {
+    var key = mathSectionKey(s.course, s.room, s.teacherLabel);
+    var prev = prevByKey[key] || (preferSectionId && prevById[preferSectionId]) || null;
+    if (prev) {
+      s.id = prev.id;
+      s.masterBlockId = prev.masterBlockId;
+    }
+  });
+  (students || []).forEach(function (stu) {
+    var sec = fresh.find(function (s) {
+      return mathSectionKey(s.course, s.room, s.teacherLabel) === mathSectionKey(stu.course, stu.room, stu.teacherLabel);
+    });
+    if (sec) {
+      stu.sectionId = sec.id;
+      stu.sectionKey = mathSectionKey(stu.course, stu.room, stu.teacherLabel);
+    }
+  });
+  return fresh;
 }
 
 function isMathMasterBlock(b) {
@@ -153,21 +183,48 @@ function applyMathSectionPatch(roster, sectionId, patch, teachers) {
   (teachers || []).forEach(function (t) { tById[t.id] = t; });
   var sec = r.sections.find(function (s) { return s.id === sectionId; });
   if (!sec) return r;
+  var oldKey = mathSectionKey(sec.course, sec.room, sec.teacherLabel);
   Object.assign(sec, patch);
   if (patch.teacherId && tById[patch.teacherId]) sec.teacherLabel = tById[patch.teacherId].name;
-  var oldKey = mathSectionKey(sec.course, sec.room, sec.teacherLabel);
   r.students.forEach(function (stu) {
     if (stu.sectionKey === oldKey || stu.sectionId === sectionId) {
       if (patch.course != null) stu.course = patch.course;
+      if (patch.bookEdition != null) stu.bookEdition = patch.bookEdition;
       if (patch.room != null) stu.room = patch.room;
+      if (patch.division != null) stu.division = patch.division;
       if (patch.teacherId != null) stu.teacherId = patch.teacherId;
       if (patch.teacherLabel != null) stu.teacherLabel = patch.teacherLabel;
       else if (patch.teacherId && tById[patch.teacherId]) stu.teacherLabel = tById[patch.teacherId].name;
       stu.sectionKey = mathSectionKey(stu.course, stu.room, stu.teacherLabel);
-      stu.sectionId = sec.id;
+      stu.sectionId = sectionId;
     }
   });
-  sec.sectionKey = mathSectionKey(sec.course, sec.room, sec.teacherLabel);
+  r.sections = rebuildMathSectionsPreserve(r.students, r.sections, sectionId);
+  return r;
+}
+
+function applyMathStudentPatch(roster, studentId, patch, teachers) {
+  var r = normalizeMathRoster(roster);
+  var tById = {};
+  (teachers || []).forEach(function (t) { tById[t.id] = t; });
+  var prevSectionId = null;
+  r.students = r.students.map(function (stu) {
+    if (stu.id !== studentId) return stu;
+    prevSectionId = stu.sectionId;
+    var next = Object.assign({}, stu, patch);
+    if (patch.teacherId != null) {
+      next.teacherId = patch.teacherId || null;
+      next.teacherLabel = patch.teacherId && tById[patch.teacherId] ? tById[patch.teacherId].name : (patch.teacherLabel || "");
+    }
+    if (patch.toBePlaced != null) {
+      next.toBePlaced = !!patch.toBePlaced;
+    } else if (patch.course != null || patch.room != null) {
+      next.toBePlaced = !next.course || next.course.indexOf("unplaced") >= 0 || !next.room;
+    }
+    next.sectionKey = mathSectionKey(next.course, next.room, next.teacherLabel);
+    return next;
+  });
+  r.sections = rebuildMathSectionsPreserve(r.students, r.sections, prevSectionId);
   return r;
 }
 

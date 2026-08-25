@@ -56,6 +56,8 @@ const BRAND_CSS = `
 .ns-app{font-family:'Inter',system-ui,Arial,sans-serif;color:#0f1b2d;-webkit-font-smoothing:antialiased}
 .ns-disp{font-family:'Plus Jakarta Sans',system-ui,Arial,sans-serif}
 .ns-eyebrow{font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#5aa9e6;font-weight:700}
+.ns-plan-active{font-size:13px;color:rgba(255,255,255,.88);margin-top:10px;font-weight:500;line-height:1.4}
+.ns-plan-active strong{color:#fff;font-weight:700}
 .ns-nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:saturate(160%) blur(8px);border-bottom:1px solid #dbe4f0}
 .ns-mark{font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-weight:800;font-size:18px;letter-spacing:.14em;color:#0a2440}
 .ns-mark .ns-r{color:#2f80ed}
@@ -1322,6 +1324,14 @@ export default function App() {
 
   const mathSummary = useMemo(() => mathRosterSummary(mathRoster), [mathRoster]);
   const mathTeachersForSections = useMemo(() => teachers.filter((t) => !t.virtual && (t.subjects || []).includes("Math")), [teachers]);
+  const activePlanMeta = useMemo(() => {
+    const p = plans.find((x) => x.id === currentPlanId);
+    return {
+      name: planName || p?.name || "Untitled Plan",
+      updatedAt: p?.updatedAt || null,
+      isSaved: !!(currentPlanId && plans.some((x) => x.id === currentPlanId)),
+    };
+  }, [plans, currentPlanId, planName]);
 
   const runMathSyncFromMaster = () => {
     pushHistory("Sync math from master", "math");
@@ -1347,12 +1357,8 @@ export default function App() {
 
   const updateMathStudent = (studentId, patch) => {
     pushHistory("Edit math student", "math");
-    setMathRoster((r) => {
-      const nr = normalizeMathRoster(r);
-      nr.students = nr.students.map((s) => (s.id === studentId ? Object.assign({}, s, patch) : s));
-      nr.sections = rebuildMathSections(nr.students);
-      return nr;
-    });
+    const next = applyMathStudentPatch(mathRoster, studentId, patch, teachers);
+    setMathRoster(next);
     ensurePlanExists();
   };
 
@@ -1637,8 +1643,13 @@ export default function App() {
       </nav>
       <header className="ns-hero">
         <div className="ns-hero-in max-w-7xl mx-auto px-6 pt-10 pb-8">
-          <div className="ns-eyebrow">North Star Classical Christian School · AYE 2027</div>
+          <div className="ns-eyebrow">North Star Classical Christian School · AYE 2027 · App v{APP_VERSION}</div>
           <h1>Schedule Planner</h1>
+          <div className="ns-plan-active">
+            Active plan: <strong>{activePlanMeta.name}</strong>
+            {activePlanMeta.updatedAt && <> · Last saved {new Date(activePlanMeta.updatedAt).toLocaleString()}</>}
+            {!activePlanMeta.isSaved && <span className="italic opacity-80"> · not yet saved to cloud</span>}
+          </div>
           <div className="ns-statband">
             <div className="ns-st"><div className="ns-n">{blocks.filter((b) => !b.staff).length}</div><div className="ns-l">Scheduled blocks</div></div>
             <div className="ns-st"><div className="ns-n" style={critical ? { color: "#f2a99b" } : undefined}>{critical}</div><div className="ns-l">Critical conflicts</div></div>
@@ -2104,7 +2115,7 @@ export default function App() {
               <div className="bg-amber-50 border border-amber-200 rounded p-3"><div className="text-amber-800">To place / unplaced</div><div className="text-lg font-semibold text-amber-900">{mathSummary.unplaced}</div></div>
             </div>
             <p className="text-xs text-gray-500">
-              Synced with master schedule math blocks (cross-band US sections + Math subject blocks). Edit section teacher/room here to update linked master blocks. Student status and notes are saved with the plan.
+              Synced with master schedule math blocks (cross-band US sections + Math subject blocks). Edit sections and students here; use Push to master to write section teacher/room/course to linked blocks. All edits are saved with the plan.
               {mathRoster.lastSyncedAt && <> Last sync: {new Date(mathRoster.lastSyncedAt).toLocaleString()}.</>}
             </p>
 
@@ -2125,8 +2136,14 @@ export default function App() {
                   <tbody>
                     {mathRoster.sections.map((sec) => (
                       <tr key={sec.id} className="border-b border-gray-100">
-                        <td className="py-2 px-2 font-medium">{sec.course}</td>
-                        <td className="py-2 px-2 text-gray-600">{sec.bookEdition || "—"}</td>
+                        <td className="py-2 px-2">
+                          <input value={sec.course || ""} onChange={(e) => updateMathSection(sec.id, { course: e.target.value })}
+                            className="border border-gray-300 rounded px-1 py-0.5 bg-white w-full min-w-[7rem] font-medium" />
+                        </td>
+                        <td className="py-2 px-2">
+                          <input value={sec.bookEdition || ""} onChange={(e) => updateMathSection(sec.id, { bookEdition: e.target.value })}
+                            className="border border-gray-300 rounded px-1 py-0.5 bg-white w-full min-w-[5rem] text-gray-700" placeholder="Book" />
+                        </td>
                         <td className="py-2 px-2">
                           <select value={sec.room || ""} onChange={(e) => updateMathSection(sec.id, { room: e.target.value })}
                             className="border border-gray-300 rounded px-1 py-0.5 bg-white w-full max-w-[6rem]">
@@ -2170,11 +2187,13 @@ export default function App() {
                 <table className="w-full text-xs border-collapse">
                   <thead className="sticky top-0 bg-gray-50">
                     <tr className="border-b border-gray-200 text-left text-gray-600">
-                      <th className="py-2 px-2">Name</th>
+                      <th className="py-2 px-2">Last</th>
+                      <th className="py-2 px-2">First</th>
                       <th className="py-2 px-2">Grade</th>
                       <th className="py-2 px-2">Course</th>
                       <th className="py-2 px-2">Room</th>
                       <th className="py-2 px-2">Teacher</th>
+                      <th className="py-2 px-2">To place</th>
                       <th className="py-2 px-2">Status</th>
                       <th className="py-2 px-2">Notes</th>
                     </tr>
@@ -2189,11 +2208,43 @@ export default function App() {
                       })
                       .map((s) => (
                         <tr key={s.id} className={`border-b border-gray-100 ${s.toBePlaced ? "bg-amber-50" : ""}`}>
-                          <td className="py-1.5 px-2 whitespace-nowrap">{s.lastName}, {s.firstName}</td>
-                          <td className="py-1.5 px-2">{s.grade}</td>
-                          <td className="py-1.5 px-2">{s.course}</td>
-                          <td className="py-1.5 px-2">{s.room || "—"}</td>
-                          <td className="py-1.5 px-2">{s.teacherLabel || "—"}</td>
+                          <td className="py-1.5 px-2">
+                            <input value={s.lastName || ""} onChange={(e) => updateMathStudent(s.id, { lastName: e.target.value })}
+                              className="border border-gray-300 rounded px-1 py-0.5 w-full min-w-[4.5rem] bg-white" />
+                          </td>
+                          <td className="py-1.5 px-2">
+                            <input value={s.firstName || ""} onChange={(e) => updateMathStudent(s.id, { firstName: e.target.value })}
+                              className="border border-gray-300 rounded px-1 py-0.5 w-full min-w-[4.5rem] bg-white" />
+                          </td>
+                          <td className="py-1.5 px-2">
+                            <select value={s.grade || ""} onChange={(e) => updateMathStudent(s.id, { grade: e.target.value })}
+                              className="border border-gray-300 rounded px-1 py-0.5 bg-white w-full max-w-[3.5rem]">
+                              <option value="">—</option>
+                              {GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
+                            </select>
+                          </td>
+                          <td className="py-1.5 px-2">
+                            <input value={s.course || ""} onChange={(e) => updateMathStudent(s.id, { course: e.target.value })}
+                              className="border border-gray-300 rounded px-1 py-0.5 w-full min-w-[6rem] bg-white" />
+                          </td>
+                          <td className="py-1.5 px-2">
+                            <select value={s.room || ""} onChange={(e) => updateMathStudent(s.id, { room: e.target.value })}
+                              className="border border-gray-300 rounded px-1 py-0.5 bg-white w-full max-w-[5rem]">
+                              <option value="">—</option>
+                              {planRooms.map((r) => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                          </td>
+                          <td className="py-1.5 px-2">
+                            <select value={s.teacherId || ""} onChange={(e) => updateMathStudent(s.id, { teacherId: e.target.value || null })}
+                              className="border border-gray-300 rounded px-1 py-0.5 bg-white w-full max-w-[8rem]">
+                              <option value="">{s.teacherLabel || "—"}</option>
+                              {mathTeachersForSections.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                            </select>
+                          </td>
+                          <td className="py-1.5 px-2 text-center">
+                            <input type="checkbox" checked={!!s.toBePlaced} onChange={(e) => updateMathStudent(s.id, { toBePlaced: e.target.checked })}
+                              title="Mark as to-be-placed" />
+                          </td>
                           <td className="py-1.5 px-2">
                             <input value={s.status || ""} onChange={(e) => updateMathStudent(s.id, { status: e.target.value })}
                               className="border border-gray-300 rounded px-1 py-0.5 w-full min-w-[5rem] bg-white" placeholder="Status" />
