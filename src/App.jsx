@@ -132,7 +132,9 @@ const DAY_NAMES = { M: "Monday", T: "Tuesday", W: "Wednesday", Th: "Thursday" };
 const SHARED_SPACES = ["F.Hall", "COVE", "Gym", "Field", "Foyer"];
 
 const BANDS = ["K", "1st", "2nd", "3rd/4th", "5th/6th", "7th/8th", "9th/10th", "11th/12th"];
+const ADMIN_BAND = "Admin";
 const DIVISION = (band) => {
+  if (band === ADMIN_BAND) return "Admin";
   if (["K", "1st", "2nd", "3rd/4th", "5th/6th"].includes(band)) return "Grammar";
   if (band === "7th/8th") return "Logic";
   return "Rhetoric";
@@ -226,6 +228,23 @@ function blankBlock(band, day) {
   };
 }
 
+function blankAdminBlock(day) {
+  return {
+    id: nextBlockId(),
+    band: ADMIN_BAND,
+    course: "",
+    subject: "Admin",
+    days: [day],
+    start: null,
+    end: null,
+    teacher: null,
+    teacher2: null,
+    room: "",
+    grades: [],
+    admin: true,
+  };
+}
+
 function isFacilityPdfRow(b) {
   return b && (b.facility || b.course === "Setup" || b.course === "Teardown");
 }
@@ -236,6 +255,9 @@ const SEED_BLOCKS = [
   mk("K–6th", "Combined Opening", "Formation", ["T"], "10:30", "10:45", "adjei", "COVE", { anchor: true }),
   mk("7th–12th", "US Opening & Formation", "Formation", ["T"], "10:30", "11:15", "andersen", "COVE", { anchor: true }),
   mk("Faculty", "Faculty Cohorts (all PT)", "Staff", ["T"], "12:05", "12:50", null, "F.Hall", { anchor: true, staff: true }),
+
+  // ---- Admin / leadership duties (visible on Admin band; skip conflict checks) ----
+  mk("Admin", "Math Lead", "Admin", ["M", "W", "Th"], "9:18", "10:03", "gabrielson", "", { admin: true }),
 
   // ---- All-school anchor ----
   mk("All School", "Opening", "Formation", ["M", "W", "Th"], "8:15", "8:25", "adjei", "F.Hall", { anchor: true }),
@@ -605,7 +627,7 @@ export default function App() {
   // -------------------- CONFLICT ENGINE --------------------
   const conflicts = useMemo(() => {
     let out = [];
-    const real = blocks.filter((b) => !b.staff);
+    const real = blocks.filter((b) => !b.staff && !b.admin);
     const teachBlocks = [];
     real.forEach((b) => {
       [b.teacher, b.teacher2].forEach((tid) => {
@@ -828,7 +850,7 @@ export default function App() {
   // -------------------- workload (ƒ) — compensation detail intentionally excluded --------------------
   const workload = useMemo(() => {
     const rows = teachers.filter((x) => !x.virtual && x.status !== "Admin").map((tc) => {
-      const mine = blocks.filter((b) => (b.teacher === tc.id || b.teacher2 === tc.id) && !b.staff);
+      const mine = blocks.filter((b) => (b.teacher === tc.id || b.teacher2 === tc.id) && !b.staff && !b.admin);
       const wkMin = mine.reduce((s, b) => blockHasTime(b) ? s + (b.end - b.start) * b.days.length : s, 0);
       const teachHrs = wkMin / 60;
       // BUDGETED: policy formula (teaching hrs × plan ratio). Actuals are layered on below.
@@ -850,11 +872,13 @@ export default function App() {
   const buildTeacherDay = (tid, d) => {
     const tcRec = tById[tid] || {};
     const mine = blocks.filter((b) => (b.teacher === tid || b.teacher2 === tid) && !b.staff);
-    const teach = mine.filter((b) => b.days.includes(d) && blockHasTime(b)).sort((a, b) => a.start - b.start);
-    if (!teach.length) return [];
+    const dayBlocks = mine.filter((b) => b.days.includes(d) && blockHasTime(b)).sort((a, b) => a.start - b.start);
+    if (!dayBlocks.length) return [];
+    const hasTeaching = dayBlocks.some((b) => !b.admin);
+    const teach = dayBlocks;
     const firstClass = tcRec.firstClass !== false;
     const synth = [];
-    if (firstClass) {
+    if (firstClass && hasTeaching) {
       synth.push({ id: `arr-${d}`, gapKey: "arrival", course: "Arrival", synthetic: true, gap: true,
         start: t0745, end: d === "T" ? Math.min(teach[0].start, t("10:00")) : t0815, room: "" });
       if (d !== "T") synth.push({ id: `open-${d}`, course: "Opening (all school)", synthetic: true, start: t0815, end: t0825, room: "F.Hall" });
@@ -964,7 +988,7 @@ export default function App() {
   const facilityBufferMinsForTeacher = (tid) => {
     let setupMin = 0;
     let teardownMin = 0;
-    blocks.filter((b) => (b.teacher === tid || b.teacher2 === tid) && !b.staff).forEach((b) => {
+    blocks.filter((b) => (b.teacher === tid || b.teacher2 === tid) && !b.staff && !b.admin).forEach((b) => {
       if (b.room && b.room.toLowerCase() !== "various" && b.room.toLowerCase() !== "tbd") {
         setupMin += params.setup * b.days.length;
         teardownMin += params.teardown * b.days.length;
@@ -1441,7 +1465,7 @@ export default function App() {
 
   const gradeDayEntries = (grade, d) => {
     const list = blocks
-      .filter((b) => !b.staff && gradesOf(b).some((g) => BAND_GRADES[grade].includes(g)) && b.days.includes(d))
+      .filter((b) => !b.staff && !b.admin && gradesOf(b).some((g) => BAND_GRADES[grade].includes(g)) && b.days.includes(d))
       .sort((a, b) => sortBlocksForDay(a, b) || (a.splitGroup || "").localeCompare(b.splitGroup || ""));
     const entries = [];
     for (const b of list) {
@@ -1464,7 +1488,7 @@ export default function App() {
     let total = 0;
     for (const d of DAYS) {
       const seen = new Set();
-      for (const b of blocks.filter((x) => !x.staff && gradesOf(x).some((g) => BAND_GRADES[grade].includes(g)) && x.days.includes(d))) {
+      for (const b of blocks.filter((x) => !x.staff && !x.admin && gradesOf(x).some((g) => BAND_GRADES[grade].includes(g)) && x.days.includes(d))) {
         const g = b.splitGroup || b.id;
         if (seen.has(g)) continue;
         seen.add(g);
@@ -1520,9 +1544,20 @@ export default function App() {
     </div>
   );
 
-  const DivBar = { Grammar: "#059669", Logic: "#d97706", Rhetoric: "#1c2e4a" };
+  const DivBar = { Grammar: "#059669", Logic: "#d97706", Rhetoric: "#1c2e4a", Admin: "#6366f1" };
 
   const conflictIdsFor = (blockId) => activeConflicts.filter((c) => c.blocks?.some((b) => b.id === blockId));
+
+  const renderAdminBlock = (b) => (
+    <button key={b.id} onClick={() => setEditId(b.id)}
+      className={`w-full text-left rounded border px-2 py-1.5 mb-1.5 text-xs leading-tight transition border-indigo-200 bg-indigo-50 hover:border-indigo-500
+        ${editId === b.id ? "ring-2 ring-indigo-600" : ""}`}>
+      <div className="font-semibold text-indigo-950">{b.course || "(New admin duty)"}</div>
+      <div className="text-indigo-800 font-mono">{blockHasTime(b) ? `${fmt(b.start)}–${fmt(b.end)} · ${b.end - b.start}′` : "No time — set in editor"}</div>
+      <div className="text-indigo-700">{tName(b.teacher) !== "—" ? tName(b.teacher) : "— assign lead —"}</div>
+      <div className="text-indigo-500 text-[10px] mt-0.5">Admin duty · conflicts ignored</div>
+    </button>
+  );
 
   const renderBlock = (b, pairColor) => {
     const cs = conflictIdsFor(b.id);
@@ -1552,6 +1587,65 @@ export default function App() {
   };
 
   const editBlock = blocks.find((b) => b.id === editId);
+
+  const renderAdminEditor = (b) => (
+    <div className="bg-indigo-50 border border-indigo-300 rounded-md p-4 sticky top-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-xs uppercase tracking-widest text-indigo-700">Admin duty</div>
+        <button onClick={() => setEditId(null)} className="text-gray-400 hover:text-gray-700 text-sm">✕</button>
+      </div>
+      <p className="text-xs text-indigo-800 mb-3 border-l-2 border-indigo-400 pl-2">
+        Leadership and admin responsibilities (Math Lead, etc.). These blocks appear on the Admin grid and faculty reports but do not trigger conflict checks.
+      </p>
+      <label className="block text-xs text-gray-500 mb-1">Course / duty name</label>
+      <input value={b.course} placeholder="e.g. Math Lead"
+        onFocus={() => { blockEditSnapRef.current = scheduleSnap(); }}
+        onBlur={() => {
+          if (blockEditSnapRef.current && JSON.stringify(blockEditSnapRef.current.blocks) !== JSON.stringify(blocks)) {
+            historyRef.current.push(blockEditSnapRef.current, "Edit admin block", "schedule");
+            bumpHistory();
+            ensurePlanExists();
+          }
+          blockEditSnapRef.current = null;
+        }}
+        onChange={(e) => update(b.id, { course: e.target.value })}
+        className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm mb-3 bg-white" />
+      <label className="block text-xs text-gray-500 mb-1">Responsible person (lead)</label>
+      <select value={b.teacher || ""} onChange={(e) => updateWithHistory(b.id, { teacher: e.target.value || null }, "Change admin lead")}
+        className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm mb-3 bg-white">
+        <option value="">— select lead —</option>
+        {teachers.filter((tc) => !tc.virtual).map((tc) => (
+          <option key={tc.id} value={tc.id}>
+            {tc.name}{formatRoleSummary(tc.roles) ? ` · ${formatRoleSummary(tc.roles)}` : ""}
+          </option>
+        ))}
+      </select>
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Start</label>
+          <input type="time" value={toInput(b.start)}
+            onChange={(e) => updateWithHistory(b.id, { start: e.target.value ? t(e.target.value) : null }, "Change admin block time")}
+            className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm bg-white" />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">End</label>
+          <input type="time" value={toInput(b.end)}
+            onChange={(e) => updateWithHistory(b.id, { end: e.target.value ? t(e.target.value) : null }, "Change admin block time")}
+            className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm bg-white" />
+        </div>
+      </div>
+      <label className="block text-xs text-gray-500 mb-1">Days</label>
+      <div className="flex gap-1.5 mb-3">
+        {DAYS.map((d) => (
+          <button key={d} onClick={() => updateWithHistory(b.id, { days: b.days.includes(d) ? b.days.filter((x) => x !== d) : [...b.days, d].sort((a, c) => DAYS.indexOf(a) - DAYS.indexOf(c)) }, "Change admin block days")}
+            className={`px-2.5 py-1 rounded text-xs font-semibold border ${b.days.includes(d) ? "bg-indigo-700 text-white border-indigo-700" : "bg-white text-gray-600 border-gray-300"}`}>{d}</button>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <button onClick={() => remove(b.id)} className="text-xs text-red-700 border border-red-300 rounded px-3 py-1.5 hover:bg-red-50">Delete admin block</button>
+      </div>
+    </div>
+  );
 
   const renderEditor = (b) => (
     <div className="bg-gray-50 border border-gray-300 rounded-md p-4 sticky top-4">
@@ -1718,7 +1812,7 @@ export default function App() {
             {!activePlanMeta.isSaved && <span className="italic opacity-80"> · not yet saved to cloud</span>}
           </div>
           <div className="ns-statband">
-            <div className="ns-st"><div className="ns-n">{blocks.filter((b) => !b.staff).length}</div><div className="ns-l">Scheduled blocks</div></div>
+            <div className="ns-st"><div className="ns-n">{blocks.filter((b) => !b.staff && !b.admin).length}</div><div className="ns-l">Scheduled blocks</div></div>
             <div className="ns-st"><div className="ns-n" style={critical ? { color: "#f2a99b" } : undefined}>{critical}</div><div className="ns-l">Critical conflicts</div></div>
             <div className="ns-st"><div className="ns-n" style={warnings ? { color: "#f3d79a" } : undefined}>{warnings}</div><div className="ns-l">Warnings</div></div>
             <div className="ns-st"><div className="ns-n">{workload.rows.reduce((s, r) => s + r.teachHrs, 0).toFixed(1)}</div><div className="ns-l">Teach hrs / wk ƒ</div></div>
@@ -1747,18 +1841,28 @@ export default function App() {
                   {bd}
                 </button>
               ))}
+              <button onClick={() => { setBand(ADMIN_BAND); setEditId(null); }}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${band === ADMIN_BAND ? "bg-indigo-700 text-white border-indigo-700" : "bg-indigo-50 text-indigo-800 border-indigo-300 hover:border-indigo-700"}`}>
+                Admin
+              </button>
               <span className="ml-auto text-xs text-gray-500 self-center">
-                Division: <span className="font-semibold">{DIVISION(band)} School</span> · click any block to edit
+                {band === ADMIN_BAND ? (
+                  <>Section: <span className="font-semibold text-indigo-800">Leadership & admin duties</span> · conflicts ignored</>
+                ) : (
+                  <>Division: <span className="font-semibold">{DIVISION(band)} School</span> · click any block to edit</>
+                )}
               </span>
             </div>
             <div className={`grid ${editId ? "grid-cols-1 lg:grid-cols-4" : "grid-cols-1 lg:grid-cols-4"} gap-4`}>
               <div className={`${editId ? "lg:col-span-3" : "lg:col-span-4"} grid grid-cols-2 md:grid-cols-4 gap-3`}>
                 {DAYS.map((d) => {
-                  const dayBlocks = blocks
-                    .filter((b) => !b.staff && (gradesOf(b).length === 0 ? b.crossBand && ["7th/8th","9th/10th","11th/12th"].includes(band) : gradesOf(b).some((g) => BAND_GRADES[band].includes(g))) && b.days.includes(d))
-                    .sort(sortBlocksForDay);
+                  const dayBlocks = band === ADMIN_BAND
+                    ? blocks.filter((b) => b.admin && b.days.includes(d)).sort(sortBlocksForDay)
+                    : blocks
+                      .filter((b) => !b.staff && !b.admin && (gradesOf(b).length === 0 ? b.crossBand && ["7th/8th","9th/10th","11th/12th"].includes(band) : gradesOf(b).some((g) => BAND_GRADES[band].includes(g))) && b.days.includes(d))
+                      .sort(sortBlocksForDay);
                   const seen = new Set();
-                  const mins = dayBlocks.reduce((s, b) => {
+                  const mins = band === ADMIN_BAND ? 0 : dayBlocks.reduce((s, b) => {
                     if (!blockHasTime(b)) return s;
                     const g = b.splitGroup || b.id;
                     if (seen.has(g)) return s;
@@ -1766,47 +1870,59 @@ export default function App() {
                     return s + (b.end - b.start);
                   }, 0);
                   return (
-                    <div key={d} className="bg-gray-50 border border-gray-200 rounded-md p-2" style={{ borderLeftWidth: 4, borderLeftColor: DivBar[DIVISION(band)] }}>
+                    <div key={d} className="bg-gray-50 border border-gray-200 rounded-md p-2" style={{ borderLeftWidth: 4, borderLeftColor: DivBar[DIVISION(band)] || DivBar.Rhetoric }}>
                       <div className="flex items-baseline justify-between mb-2 px-1">
                         <div className="text-xs font-bold uppercase tracking-widest text-gray-700">{DAY_NAMES[d]}</div>
-                        <div className={`text-xs font-mono ${mins > params.budgetMin ? "text-red-600 font-bold" : "text-gray-400"}`}>
-                          {mins}′ / {params.budgetMin}′
-                        </div>
+                        {band !== ADMIN_BAND && (
+                          <div className={`text-xs font-mono ${mins > params.budgetMin ? "text-red-600 font-bold" : "text-gray-400"}`}>
+                            {mins}′ / {params.budgetMin}′
+                          </div>
+                        )}
                       </div>
-                      {dayBlocks.length === 0 && <div className="text-xs text-gray-400 italic px-1 py-4">No blocks — add one below.</div>}
-                      {(() => {
-                        const starts = {};
-                        const colorOf = {};
-                        dayBlocks.forEach((b) => {
-                          if (!b.splitGroup) return;
-                          if (colorOf[b.splitGroup]) return;
-                          const k = String(b.start);
-                          starts[k] = (starts[k] || 0) + 1;
-                          colorOf[b.splitGroup] = starts[k] === 1 ? "#bf4a3c" : "#b9831f";
-                        });
-                        return dayBlocks.map((b) => renderBlock(b, b.splitGroup ? colorOf[b.splitGroup] : null));
-                      })()}
+                      {dayBlocks.length === 0 && <div className="text-xs text-gray-400 italic px-1 py-4">{band === ADMIN_BAND ? "No admin duties — add one below." : "No blocks — add one below."}</div>}
+                      {band === ADMIN_BAND ? (
+                        dayBlocks.map((b) => renderAdminBlock(b))
+                      ) : (
+                        (() => {
+                          const starts = {};
+                          const colorOf = {};
+                          dayBlocks.forEach((b) => {
+                            if (!b.splitGroup) return;
+                            if (colorOf[b.splitGroup]) return;
+                            const k = String(b.start);
+                            starts[k] = (starts[k] || 0) + 1;
+                            colorOf[b.splitGroup] = starts[k] === 1 ? "#bf4a3c" : "#b9831f";
+                          });
+                          return dayBlocks.map((b) => renderBlock(b, b.splitGroup ? colorOf[b.splitGroup] : null));
+                        })()
+                      )}
                       <button onClick={() => {
-                        pushHistory("Add block", "schedule");
-                        const nb = blankBlock(band, d);
+                        pushHistory(band === ADMIN_BAND ? "Add admin block" : "Add block", "schedule");
+                        const nb = band === ADMIN_BAND ? blankAdminBlock(d) : blankBlock(band, d);
                         setBlocks((bs) => [...bs, nb]);
                         setEditId(nb.id);
                         ensurePlanExists();
-                      }} className="w-full text-xs text-blue-900 border border-dashed border-blue-900 rounded px-2 py-1.5 mt-1 hover:bg-blue-50">
-                        + Add block
+                      }} className={`w-full text-xs border border-dashed rounded px-2 py-1.5 mt-1 hover:bg-indigo-50 ${band === ADMIN_BAND ? "text-indigo-800 border-indigo-600" : "text-blue-900 border-blue-900 hover:bg-blue-50"}`}>
+                        {band === ADMIN_BAND ? "+ Add admin block" : "+ Add block"}
                       </button>
                     </div>
                   );
                 })}
               </div>
-              {editId && editBlock && <div className="lg:col-span-1">{renderEditor(editBlock)}</div>}
+              {editId && editBlock && <div className="lg:col-span-1">{editBlock.admin ? renderAdminEditor(editBlock) : renderEditor(editBlock)}</div>}
             </div>
             <p className="text-xs text-gray-500 mt-4">
-              ƒ Day totals sum block durations against the {params.budgetMin}-minute instructional budget (PRD 3.4 §19). Combined-band blocks (Wellness 3–6, US formations) appear on every constituent band's grid.
+              {band === ADMIN_BAND ? (
+                <>Admin blocks record leadership duties (Math Lead, department head, etc.). Specify <strong>course/duty</strong>, <strong>responsible person</strong>, and <strong>time slot</strong>. They appear on faculty term sheets but do not count toward teaching load or conflict checks.</>
+              ) : (
+                <>ƒ Day totals sum block durations against the {params.budgetMin}-minute instructional budget (PRD 3.4 §19). Combined-band blocks (Wellness 3–6, US formations) appear on every constituent band&apos;s grid.</>
+              )}
             </p>
+            {band !== ADMIN_BAND && (
             <p className="text-xs text-gray-500 mt-2">
               Click any block to edit it. Set <strong>Room</strong> in the editor panel on the right (or below on mobile). Room conflicts appear on the Conflicts tab.
             </p>
+            )}
           </div>
         )}
 
@@ -2366,14 +2482,14 @@ export default function App() {
                       </thead>
                       <tbody>
                         {list.map((b, i) => {
-                          const roleLabels = roleLabelsForSlot(tc, d, b.start, b.end);
-                          const courseLabel = annotateCourseWithRoles(b.course, roleLabels);
+                          const roleLabels = b.admin ? [] : roleLabelsForSlot(tc, d, b.start, b.end);
+                          const courseLabel = b.admin ? (b.course || "Admin duty") : annotateCourseWithRoles(b.course, roleLabels);
                           return (
-                          <tr key={b.id} style={{ background: b.synthetic ? "#fbfcfe" : i % 2 ? RPT.tile : "white", pageBreakInside: "avoid" }}>
+                          <tr key={b.id} style={{ background: b.admin ? "#f5f3ff" : b.synthetic ? "#fbfcfe" : i % 2 ? RPT.tile : "white", pageBreakInside: "avoid" }}>
                             <td style={{ padding: "3px 6px", borderBottom: `1px solid ${RPT.line}`, whiteSpace: "nowrap", color: RPT.grey }}>{b.hidden ? "—" : `${fmt(b.start)} – ${fmt(b.end)}`}</td>
                             <td style={{ padding: "3px 6px", borderBottom: `1px solid ${RPT.line}`, fontFamily: "monospace" }}>{b.hidden ? "—" : b.end - b.start}</td>
-                            <td style={{ padding: "3px 6px", borderBottom: `1px solid ${RPT.line}`, fontWeight: b.synthetic ? 400 : 600, fontStyle: b.synthetic ? "italic" : "normal", color: b.synthetic ? RPT.grey : RPT.ink }}>{courseLabel}</td>
-                            <td style={{ padding: "3px 6px", borderBottom: `1px solid ${RPT.line}` }}>{b.synthetic ? "—" : gradeLabel(gradesOf(b))}</td>
+                            <td style={{ padding: "3px 6px", borderBottom: `1px solid ${RPT.line}`, fontWeight: b.admin ? 600 : b.synthetic ? 400 : 600, fontStyle: b.admin || b.synthetic ? "italic" : "normal", color: b.admin ? "#4338ca" : b.synthetic ? RPT.grey : RPT.ink }}>{courseLabel}{b.admin ? " (admin)" : ""}</td>
+                            <td style={{ padding: "3px 6px", borderBottom: `1px solid ${RPT.line}` }}>{b.synthetic ? "—" : b.admin ? "Admin" : gradeLabel(gradesOf(b))}</td>
                             <td style={{ padding: "3px 6px", borderBottom: `1px solid ${RPT.line}` }}>{b.room || ""}</td>
                           </tr>
                           );
@@ -2389,7 +2505,7 @@ export default function App() {
 
           // ---- subject report ----
           const subjectReport = (s) => {
-            const secs = blocks.filter((b) => !b.staff && b.subject === s)
+            const secs = blocks.filter((b) => !b.staff && !b.admin && b.subject === s)
               .sort((a, b) => GRADES.indexOf(gradesOf(a)[0] || "K") - GRADES.indexOf(gradesOf(b)[0] || "K") || a.start - b.start);
             const wkMin = secs.reduce((t, b) => t + (b.end - b.start) * b.days.length, 0);
             return (

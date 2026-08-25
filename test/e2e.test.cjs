@@ -195,7 +195,7 @@ const storageDump = () => (globalThis.__NSCS_DUMP__ ? globalThis.__NSCS_DUMP__()
   check('MATH: section course inputs editable', doc.querySelectorAll('fieldset legend').length > 0 && [...doc.querySelectorAll('table input')].some(i => /ALG|Alg|Geometry|Pre/i.test(i.value || '')));
   check('MATH: students table hidden', !/legend[^>]*>Students</.test(doc.getElementById('root').innerHTML));
   check('HERO: active plan visible', /Active plan:/.test(doc.getElementById('root').innerHTML));
-  check('HERO: app version visible', /App v1\.7\.4/.test(doc.getElementById('root').innerHTML));
+  check('HERO: app version visible', /App v1\.7\.5/.test(doc.getElementById('root').innerHTML));
 
   // Teacher profile roles (Gabrielson → Math Lead)
   await act(async () => { btnByText(doc, /Teachers & Load/).click(); await flush(); });
@@ -223,6 +223,18 @@ const storageDump = () => (globalThis.__NSCS_DUMP__ ? globalThis.__NSCS_DUMP__()
   check('ROLES: faculty report annotates Algebra II', /Algebra II · Math Lead/.test(reportHTML));
   await act(async () => { btnByText(doc, /Schedule Grid/).click(); await flush(); });
   check('ROLES: schedule grid annotates Algebra II block', /Algebra II · Math Lead/.test(doc.getElementById('root').innerHTML));
+
+  // Admin section (leadership duties — conflict-free)
+  await act(async () => { btnByText(doc, /Schedule Grid/).click(); await flush(); });
+  const adminBtn = [...doc.querySelectorAll('button')].find(b => /^Admin$/i.test(b.textContent.trim()));
+  check('ADMIN: Admin band pill in schedule grid', !!adminBtn);
+  if (adminBtn) {
+    await act(async () => { adminBtn.click(); await flush(); });
+    const adminHTML = doc.getElementById('root').innerHTML;
+    check('ADMIN: Gabrielson Math Lead block visible', /Math Lead/.test(adminHTML) && /Gabrielson/.test(adminHTML));
+    check('ADMIN: conflicts ignored label on tile', /conflicts ignored/i.test(adminHTML));
+    check('ADMIN: add admin block control', /Add admin block/i.test(adminHTML));
+  }
 
   console.log('\n════════ FULL VALIDATION RESULTS ════════');
   results.forEach(r => console.log(r));
